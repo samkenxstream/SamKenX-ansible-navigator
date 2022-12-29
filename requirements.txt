@@ -13,7 +13,7 @@ attrs==21.4.0
 babel==2.9.1
 backports-zoneinfo==0.2.1 ; python_version < "3.9.0"
 bindep==2.10.2
-certifi==2021.10.8
+certifi==2022.12.7
 cffi==1.15.0
 cfgv==3.3.1
 charset-normalizer==2.0.12
