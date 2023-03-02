@@ -1,8 +1,8 @@
 """Base class for run interactive/stdout tests."""
+from __future__ import annotations
+
 import difflib
 import os
-
-from typing import Optional
 
 import pytest
 
@@ -40,7 +40,7 @@ class BaseClass:
     """Base class for run interactive/stdout tests."""
 
     UPDATE_FIXTURES = False
-    TEST_FOR_MODE: Optional[str] = None
+    TEST_FOR_MODE: str | None = None
 
     @staticmethod
     @pytest.fixture(scope="module", name="tmux_session")
@@ -57,7 +57,7 @@ class BaseClass:
                 "export ANSIBLE_DEVEL_WARNING=False",
                 "export ANSIBLE_DEPRECATION_WARNINGS=False",
             ],
-            "unique_test_id": request.node.nodeid,
+            "request": request,
         }
         with TmuxSession(**params) as tmux_session:
             yield tmux_session

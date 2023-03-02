@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ansible_navigator.content_defs import ContentView
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..content_defs import SerializationFormat
 from ..ui_framework import Interaction
 from ..utils.functions import remove_dbl_un
@@ -80,7 +80,7 @@ class Action:
             elif filename.endswith(".json"):
                 write_as = ".json"
             else:
-                write_as = interaction.ui.content_format().value.file_extention
+                write_as = interaction.ui.content_format().value.file_extension
 
         if write_as == ".txt":
             with open(os.path.abspath(filename), file_mode, encoding="utf-8") as fh:

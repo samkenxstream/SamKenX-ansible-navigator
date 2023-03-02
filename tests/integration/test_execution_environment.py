@@ -1,10 +1,11 @@
 """Test the use of ``execution-environment`` through to runner."""
+from __future__ import annotations
+
 import os
 import shlex
 
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Dict
 
 import pytest
 
@@ -55,12 +56,12 @@ class Test(Cli2Runner):
 
     def run_test(
         self,
-        mocked_runner: "MagicMock",
+        mocked_runner: MagicMock,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         """Confirm execution of ``cli.main()`` produces the desired results.

@@ -1,22 +1,28 @@
 {
-    "name": "test[print image to stdout  clear && ansible-navigator images --ee True --ll debug --mode stdout  | grep creator]",
+    "name": "test[clear-&&-ansible-navigator-images---ee-true---ll-debug---mode-stdout--|-grep-creator-print-image-to-stdout-['repository:-ghcr.io/ansible/creator-ee']-[]-true-0-search-for-help]",
     "index": 0,
     "comment": "print image to stdout",
     "additional_information": {
         "present": [
-            "repository: quay.io/ansible/creator-ee"
+            "repository: ghcr.io/ansible/creator-ee"
         ],
         "absent": [],
         "compared_fixture": false
     },
     "output": [
-        "  full_name: quay.io/ansible/creator-ee:v0.4.2",
-        "      - quay.io/ansible/creator-ee:v0.4.2",
-        "      - quay.io/ansible/creator-ee@sha256:6b2160c2c4df4fe87a5efe4f33a16c6369228d1e99a0918db517652bd09b71e9",
-        "      - quay.io/ansible/creator-ee:v0.4.2",
+        "  full_name: ghcr.io/ansible/creator-ee:v0.13.0",
+        "          org.opencontainers.image.source: https://github.com/ansible/creator-ee",
+        "        created_by: '/bin/sh -c #(nop) LABEL org.opencontainers.image.source https://github.com/ansible/creator-ee/blob/main/base/Containerfile'",
+        "      - comment: FROM creator-base",
+        "        created_by: '/bin/sh -c #(nop) LABEL org.opencontainers.image.source https://github.com/ansible/creator-ee'",
+        "        org.opencontainers.image.source: https://github.com/ansible/creator-ee",
+        "      - ghcr.io/ansible/creator-ee:v0.13.0",
+        "      - ghcr.io/ansible/creator-ee@sha256:341e9bee3198244600f7553a9844698717c208080eb6d32f42d4c223dcc0bcb0",
+        "      - ghcr.io/ansible/creator-ee@sha256:b01b5f96fd07d1df1437fa34bef6dfeb960851c35e678243b5c730bfab9842ad",
+        "      - ghcr.io/ansible/creator-ee:v0.13.0",
         "  name: creator-ee",
-        "  name_tag: creator-ee:v0.4.2 (primary)",
-        "  repository: quay.io/ansible/creator-ee",
-        "(venv) bash-5.1$"
+        "  name_tag: creator-ee:v0.13.0 (primary)",
+        "  repository: ghcr.io/ansible/creator-ee",
+        "(venv) bash$"
     ]
 }

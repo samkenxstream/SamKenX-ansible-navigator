@@ -27,9 +27,9 @@ ignorePaths:
   # The setup file
   - setup.cfg
   # All grammar (text-mate) tokenization files
-  - share/ansible_navigator/grammar/*.json
+  - src/ansible_navigator/data/grammar/*.json
   # Theme files
-  - share/ansible_navigator/themes/*.json
+  - src/ansible_navigator/data/themes/*.json
   # Anything in the vendored tokenization directory
   - src/ansible_navigator/tm_tokenize/*
   # requirements.txt is generated
@@ -42,13 +42,8 @@ ignorePaths:
 ignoreRegExpList:
   - "--\\w+" # ansible-navigator long CLI parameters
   - "(window|_screen|win)\\.\\w+" # curses calls e.g. getyx
-  - "{user}`\\w+`" # usernames in changelog entry
   - "\\^.*$" # kegex regular expressions
-  - "`sentinals`" # mentioned in a changelog when corrected, here vs. list w/ ``
   - "ANSIBLE_\\w+" # ansible environment variables
   - "curses\\.\\w+" # curses functions e.g. curses.doupdate
   - "monkeypatch\\.\\w+" # monkeypatch functions e.g. monkeypatch.setenv
   - "request\\.node\\.\\w+" # pytest request  e.g. request.node.nodeid
-languageSettings:
-  - languageId: python
-    allowCompoundWords: true

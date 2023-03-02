@@ -8,37 +8,12 @@ from pathlib import Path
 from sys import path
 
 from setuptools_scm import get_version
-from setuptools_scm.git import fetch_on_shallow
-from setuptools_scm.git import parse
 
-
-# -- Special accommodations for RTD ------------------------------------------
-
-
-def parse_with_fetch(*args, **kwargs) -> str:
-    """If the repo is found to be shallow, fetch a full.
-
-    By default, RTD does a fetch --limit 50, if a tag is not
-    present in the last 50 commits, the version reported by setuptools_scm
-    will be incorrect and appears as ``v0.1.dev...`` in the towncrier changelog.
-    Another approach is to enable ``DONT_SHALLOW_CLONE`` for the repo
-    https://docs.readthedocs.io/en/stable/feature-flags.html#feature-flags
-    This was done for ansible-navigator on the day of this commit.
-
-    :param args: The arguments
-    :param kwargs: The keyword arguments
-    :returns: The parsed version
-    """
-    assert "pre_parse" not in kwargs
-    return parse(*args, pre_parse=fetch_on_shallow, **kwargs)
-
-
-get_scm_version = partial(get_version, parse=parse_with_fetch)
 
 # -- Path setup --------------------------------------------------------------
 
 PROJECT_ROOT_DIR = Path(__file__).parents[1].resolve()
-get_scm_version = partial(get_scm_version, root=PROJECT_ROOT_DIR)
+get_scm_version = partial(get_version, root=PROJECT_ROOT_DIR)
 
 # Make in-tree extension importable in non-tox setups/envs, like RTD.
 # Refs:
@@ -104,10 +79,7 @@ pygments_style = "ansible"
 nitpicky = True
 root = "ansible_navigator"
 nitpick_ignore = [
-    ("py:class", "_Rule"),
-    ("py:class", "ansible_runner.runner.Runner"),
-    ("py:class", "argparse._SubParsersAction"),
-    ("py:class", "argparse.HelpFormatter"),
+    ("py:class", "ContentTypeSequence"),
     ("py:class", "Captures"),
     ("py:class", "CompiledRegsetRule"),
     ("py:class", "CompiledRule"),
@@ -116,20 +88,18 @@ nitpick_ignore = [
     ("py:class", "ContentView"),
     ("py:class", "CursesLine"),
     ("py:class", "CursesLines"),
-    ("py:class", "dataclasses.InitVar"),
     ("py:class", "Entry"),
     ("py:class", "FieldButton"),
     ("py:class", "FieldChecks"),
     ("py:class", "FieldInformation"),
     ("py:class", "FieldRadio"),
     ("py:class", "FieldWorking"),
-    ("py:class", "Form"),
     ("py:class", "Grammar"),
     ("py:class", "Grammars"),
-    ("py:class", "Internals"),
     ("py:class", "IO"),
+    ("py:class", "InitVar"),  # needed by py310 or lower
+    ("py:class", "Internals"),
     ("py:class", "Match"),
-    ("py:class", "multiprocessing.context.BaseContext.Queue"),
     ("py:class", "NavigatorPostProcessor"),
     ("py:class", "Pattern"),
     ("py:class", "PatternRule"),
@@ -139,12 +109,19 @@ nitpick_ignore = [
     ("py:class", "State"),
     ("py:class", "WhileRule"),
     ("py:class", "Window"),
+    ("py:class", "_Rule"),
+    ("py:class", "ansible_runner.runner.Runner"),
+    ("py:class", "argparse.HelpFormatter"),
+    ("py:class", "argparse._SubParsersAction"),
+    ("py:class", "dataclasses.InitVar"),
+    ("py:class", "multiprocessing.context.BaseContext.Queue"),
     ("py:class", "yaml.cyaml.CSafeDumper"),
+    ("py:class", "yaml.dumper.SafeDumper"),
     ("py:class", "yaml.nodes.ScalarNode"),
     ("py:class", f"{root}.configuration_subsystem.definitions.SettingsFileType"),
     ("py:class", f"{root}.configuration_subsystem.defs_presentable.PresentableSettingsEntries"),
-    ("py:class", f"{root}.configuration_subsystem.defs_presentable.TCli"),
-    ("py:class", f"{root}.configuration_subsystem.defs_presentable.TEnt"),
+    ("py:class", f"{root}.configuration_subsystem.defs_presentable.CliT"),
+    ("py:class", f"{root}.configuration_subsystem.defs_presentable.EntT"),
     ("py:class", f"{root}.tm_tokenize.fchainmap.TKey"),
     ("py:class", f"{root}.tm_tokenize.fchainmap.TValue"),
     ("py:class", f"{root}.ui_framework.curses_defs.CursesLine"),
@@ -171,7 +148,6 @@ extensions = [
     "myst_parser",
     "notfound.extension",
     "sphinxcontrib.apidoc",
-    "sphinxcontrib.towncrier",  # provides `towncrier-draft-entries` directive
     "sphinx_copybutton",
     # Tree-local extensions:
     "single_sourced_data",  # in-tree extension
@@ -196,9 +172,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = [
-    "changelog-fragments.d/**",  # Towncrier-managed change notes
-]
+# exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -294,13 +268,6 @@ apidoc_toc_file = None
 # -- Options for linkcheck builder -------------------------------------------
 
 linkcheck_workers = 25
-
-# -- Options for towncrier_draft extension -----------------------------------
-
-towncrier_draft_autoversion_mode = "draft"  # or: "sphinx-version", "sphinx-release"
-towncrier_draft_include_empty = True
-towncrier_draft_working_directory = PROJECT_ROOT_DIR
-# Not yet supported: towncrier_draft_config_path = "pyproject.toml"  # relative to cwd
 
 # -- Options for myst_parser extension ---------------------------------------
 

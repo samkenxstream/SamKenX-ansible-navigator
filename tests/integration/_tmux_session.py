@@ -1,18 +1,34 @@
 """the tmux session"""
+from __future__ import annotations
+
 import datetime
 import os
 import shlex
 import time
+import uuid
 import warnings
 
+from pathlib import Path
 from timeit import default_timer as timer
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import TypedDict
 
 import libtmux
+import pytest
 
 from ._common import generate_test_log_dir
+
+
+class TmuxSessionKwargs(TypedDict, total=False):
+    """tmux session kwargs"""
+
+    config_path: Path
+    cwd: Path
+    pane_height: int
+    pane_width: int
+    pull_policy: str
+    request: pytest.FixtureRequest
+    setup_commands: list[str]
+    shell_prompt_timeout: int
 
 
 class TmuxSession:
@@ -23,18 +39,18 @@ class TmuxSession:
 
     def __init__(
         self,
-        unique_test_id,
-        config_path=None,
-        cwd=None,
-        pane_height=20,
-        pane_width=200,
+        request: pytest.FixtureRequest,
+        config_path: Path | None = None,
+        cwd: Path | None = None,
+        pane_height: int = 20,
+        pane_width: int = 200,
         pull_policy: str = "never",
-        setup_commands=None,
-        shell_prompt_timeout=10,
+        setup_commands: list | None = None,
+        shell_prompt_timeout: int = 10,
     ) -> None:
         """Initialize a tmux session.
 
-        :param unique_test_id: The unique id for this tmux session, the session name
+        :param request: The request for this fixture
         :param config_path: The path to a settings file to use
         :param cwd: The current working directory to set when starting the tmux session
         :param pane_height: The height of the tmux session in lines
@@ -48,20 +64,20 @@ class TmuxSession:
         self.cli_prompt: str
         self._config_path = config_path
         self._cwd = cwd
-        self._fail_remaining: List = []
+        self._fail_remaining: list = []
         self._pane_height = pane_height
         self._pane_width = pane_width
         self._pull_policy = pull_policy
         self._session: libtmux.Session
-        self._session_name = os.path.splitext(unique_test_id)[0]
-        self._setup_capture: List
+        self._session_name = str(uuid.uuid4())
+        self._setup_capture: list
         self._setup_commands = setup_commands or []
         self._shell_prompt_timeout = shell_prompt_timeout
-        self._test_log_dir = generate_test_log_dir(unique_test_id)
+        self._test_log_dir = generate_test_log_dir(request)
 
         if self._cwd is None:
             # ensure CWD is top folder of library
-            self._cwd = os.path.join(os.path.dirname(__file__), "..", "..")
+            self._cwd = Path(__file__).parent.parent.parent
 
     def _build_tmux_session(self):
         """Create a new tmux session.
@@ -115,8 +131,11 @@ class TmuxSession:
         user = os.environ.get("USER")
         home = os.environ.get("HOME")
 
-        # get a clean shell and predictable prompt
-        self.cli_prompt = self._get_cli_prompt()
+        # set a clean shell and predictable prompt
+        self.cli_prompt = "bash$"
+        self._pane.send_keys("bash")
+        self._pane.send_keys("clear && env -i bash --noprofile --norc")
+        self._pane.send_keys(f"export PS1={self.cli_prompt}")
 
         # set environment variables for this session
         tmux_common = [f". {venv}"]
@@ -138,25 +157,24 @@ class TmuxSession:
             f"export ANSIBLE_NAVIGATOR_COLLECTION_DOC_CACHE_PATH='{collection_doc_cache}'",
         )
         tmux_common.append(f"export ANSIBLE_NAVIGATOR_PULL_POLICY='{self._pull_policy}'")
-        tmux_common.append("env")
 
         set_up_commands = tmux_common + self._setup_commands
-        set_up_command = " && ".join(set_up_commands)
+        # send the setup commands
+        for set_up_command in set_up_commands:
+            self._pane.send_keys(set_up_command)
 
-        # send setup, wait for the prompt in last line
+        self._setup_capture = self._pane.capture_pane()
+
+        self._pane.send_keys("clear")
+        self._pane.send_keys("echo ready")
+
+        # wait for the ready line
         start_time = timer()
-        self._pane.send_keys(set_up_command)
         prompt_showing = False
         while True:
             showing = self._pane.capture_pane()
-            # find the prompt in the last line of a full screen
-            # or at least a screen as big as the list of environment variables
-            # because the environment variables were dumped
             if showing:
-                prompt_showing = self.cli_prompt in showing[-1] and len(showing) > min(
-                    len(tmux_common),
-                    int(self._pane_height) - 1,
-                )
+                prompt_showing = "ready" in showing
             if prompt_showing:
                 break
             elapsed = timer() - start_time
@@ -168,7 +186,6 @@ class TmuxSession:
             time.sleep(0.1)
 
         # capture the setup screen
-        self._setup_capture = self._pane.capture_pane()
 
         # clear the screen, wait for prompt in line 0
         start_time = timer()
@@ -197,7 +214,7 @@ class TmuxSession:
     def interaction(
         self,
         value,
-        search_within_response: Optional[Union[List, str]] = None,
+        search_within_response: list | str | None = None,
         ignore_within_response=None,
         timeout=300,
         send_clear: bool = True,
@@ -271,7 +288,6 @@ class TmuxSession:
         ok_to_return = False
         err_message = "RESPONSE"
         while True:
-
             showing = self._pane.capture_pane()
 
             if showing:
@@ -327,25 +343,9 @@ class TmuxSession:
         if mode == "shell" and send_clear:
             self._pane.send_keys("clear")
 
+        # Prior to libtmux v0.15, all empty lines were removed
+        # from the captured pane. For fixture readability, remove them here
+        # https://github.com/tmux-python/libtmux/pull/405/files
+        showing = [line for line in showing if line != ""]
+
         return showing
-
-    def _get_cli_prompt(self):
-        """get CLI prompt"""
-        # start a fresh clean shell, set TERM
-        start_time = timer()
-        self._pane.send_keys("clear && env -i bash --noprofile --norc")
-        bash_prompt_visible = False
-        while True:
-            showing = self._pane.capture_pane()
-            if showing:
-                bash_prompt_visible = showing[-1].startswith("bash")
-            if bash_prompt_visible:
-                break
-
-            elapsed = timer() - start_time
-            if elapsed > self._shell_prompt_timeout:
-                time_stamp = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
-                alert = f"******** ERROR: TMUX BASH TIMEOUT  @ {elapsed}s @ {time_stamp} ********"
-                raise ValueError(alert)
-            time.sleep(0.1)
-        return showing[-1]

@@ -1,5 +1,5 @@
 """Helper functions for the ``actions`` package."""
-
+from __future__ import annotations
 
 import functools
 import importlib
@@ -8,16 +8,13 @@ import os
 import re
 
 from collections import namedtuple
-from importlib import resources
 from typing import Any
 from typing import Callable
-from typing import Dict
 from typing import Generator
-from typing import List
-from typing import Tuple
 
 from ..action_defs import RunStdoutReturn
 from ..ui_framework import error_notification
+from ..utils.compatibility import importlib_resources
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +25,7 @@ ActionT = namedtuple("ActionT", ("name", "cls", "kegex"))
 Kegex = namedtuple("Kegex", ("name", "kegex"))
 
 # Dictionary with information about all registered actions
-_ACTIONS: Dict[str, Dict] = {}
+_ACTIONS: dict[str, dict] = {}
 
 
 def _import(package: str, action: str) -> None:
@@ -45,12 +42,11 @@ def _import_all(package: str) -> None:
 
     :param package: The name of the package
     """
-    files = resources.contents(package)
-    actions = [
-        f[:-3] for f in files if f.endswith(".py") and f[0] != "_" and not f.startswith(".#")
-    ]
-    for action in actions:
-        _import(package, action)
+    for entry in importlib_resources.files(package).iterdir():
+        if entry.is_file():
+            if entry.name.endswith(".py"):
+                if not entry.name.startswith("_"):
+                    _import(package, entry.name[0:-3])
 
 
 def register(cls: Any) -> Any:
@@ -85,7 +81,7 @@ def get_factory(package: str) -> Callable:
     return functools.partial(get, package)
 
 
-def kegex(package: str, action: str) -> Tuple:
+def kegex(package: str, action: str) -> tuple:
     """Return a tuple of name, class, ``kegex`` for an action.
 
     :param package: The name of the package
@@ -115,7 +111,7 @@ def kegexes_factory(package: str) -> Callable:
     return functools.partial(kegexes, package)
 
 
-def names(package: str) -> List:
+def names(package: str) -> list:
     """List all actions in one package.
 
     :param package: The name of the package

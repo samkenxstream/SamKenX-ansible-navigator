@@ -1,4 +1,6 @@
 """Run subcommand implementation."""
+from __future__ import annotations
+
 import curses
 import json
 import logging
@@ -16,16 +18,13 @@ from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from ..action_base import ActionBase
 from ..action_defs import RunStdoutReturn
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
 from ..configuration_subsystem import to_effective
 from ..configuration_subsystem import to_sources
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..content_defs import ContentView
 from ..content_defs import SerializationFormat
 from ..runner import CommandAsync
@@ -71,7 +70,7 @@ def get_color(word):
     )
 
 
-def color_menu(_colno: int, colname: str, entry: Dict[str, Any]) -> Tuple[int, int]:
+def color_menu(_colno: int, colname: str, entry: dict[str, Any]) -> tuple[int, int]:
     # pylint: disable=too-many-branches
     """Find matching color for word.
 
@@ -117,7 +116,7 @@ def color_menu(_colno: int, colname: str, entry: Dict[str, Any]) -> Tuple[int, i
     return color, decoration
 
 
-def content_heading(obj: Any, screen_w: int) -> Optional[CursesLines]:
+def content_heading(obj: Any, screen_w: int) -> CursesLines | None:
     """Create a heading for some piece of content showing.
 
     :param obj: The content going to be shown
@@ -158,7 +157,7 @@ def content_heading(obj: Any, screen_w: int) -> Optional[CursesLines]:
     return None
 
 
-def filter_content_keys(obj: Dict[Any, Any]) -> Dict[Any, Any]:
+def filter_content_keys(obj: dict[Any, Any]) -> dict[Any, Any]:
     """Filter out some keys when showing collection content.
 
     :param obj: The object from which keys should be removed
@@ -193,7 +192,6 @@ TASK_LIST_COLUMNS = [
 
 @actions.register
 class Action(ActionBase):
-
     # pylint: disable=too-many-instance-attributes
     """Run command implementation."""
 
@@ -211,7 +209,7 @@ class Action(ActionBase):
         super().__init__(args=args, logger_name=__name__, name="run")
 
         self._subaction_type: str
-        self._msg_from_plays: Tuple[Optional[str], Optional[int]] = (None, None)
+        self._msg_from_plays: tuple[str | None, int | None] = (None, None)
         self._queue: Queue = Queue()
         self.runner: CommandAsync
         self._runner_finished: bool
@@ -227,9 +225,9 @@ class Action(ActionBase):
             show_func=self._play_stats,
             select_func=self._task_list_for_play,
         )
-        self._task_list_columns: List[str] = TASK_LIST_COLUMNS
+        self._task_list_columns: list[str] = TASK_LIST_COLUMNS
         self._content_key_filter: Callable = filter_content_keys
-        self._task_cache: Dict[str, str] = {}
+        self._task_cache: dict[str, str] = {}
         """Task name storage from playbook_on_start using the task uuid as the key"""
 
     @property
@@ -284,7 +282,7 @@ class Action(ActionBase):
             )
         return RunStdoutReturn(message="", return_code=return_code)
 
-    def run(self, interaction: Interaction, app: AppPublic) -> Optional[Interaction]:
+    def run(self, interaction: Interaction, app: AppPublic) -> Interaction | None:
         """Run :run or :replay.
 
         :param interaction: The interaction from the user
@@ -370,7 +368,6 @@ class Action(ActionBase):
             playbook_valid = False
 
         if not playbook_valid:
-
             populated_form = self._prompt_for_playbook()
             if populated_form["cancelled"]:
                 return False
@@ -457,7 +454,7 @@ class Action(ActionBase):
         self._logger.debug("Completed replay artifact request with mode %s", self.mode)
         return True
 
-    def _prompt_for_artifact(self, artifact_file: str) -> Dict[Any, Any]:
+    def _prompt_for_artifact(self, artifact_file: str) -> dict[Any, Any]:
         """Prompt for a valid artifact file.
 
         :param artifact_file: Artifact file
@@ -484,8 +481,8 @@ class Action(ActionBase):
         populated_form = form_to_dict(form, key_on_name=True)
         return populated_form
 
-    def _prompt_for_playbook(self) -> Dict[Any, Any]:
-        """Prepopulate a form to confirm the playbook details.
+    def _prompt_for_playbook(self) -> dict[Any, Any]:
+        """Pre-populate a form to confirm the playbook details.
 
         :returns: Dict with playbook and inventory detail entries
         """
@@ -538,7 +535,6 @@ class Action(ActionBase):
                 self.steps.current.show_func()
 
             if self.steps.current.type == "menu":
-
                 new_scroll = len(self.steps.current.value)
                 if self._auto_scroll:
                     self._interaction.ui.scroll(new_scroll)
@@ -550,10 +546,10 @@ class Action(ActionBase):
                 )
 
                 if self._interaction.ui.scroll() < new_scroll and self._auto_scroll:
-                    self._logger.debug("autoscroll disabled")
+                    self._logger.debug("auto_scroll disabled")
                     self._auto_scroll = False
                 elif self._interaction.ui.scroll() >= new_scroll and not self._auto_scroll:
-                    self._logger.debug("autoscroll enabled")
+                    self._logger.debug("auto_scroll enabled")
                     self._auto_scroll = True
 
             elif self.steps.current.type == "content":
@@ -573,7 +569,7 @@ class Action(ActionBase):
 
         :raises RuntimeError: If no ansible-playbook executable
         """
-        executable_cmd: Optional[str]
+        executable_cmd: str | None
 
         if self.mode == "stdout_w_artifact":
             mode = "interactive"
@@ -786,7 +782,7 @@ class Action(ActionBase):
             self._plays.value[idx]["__task_count"] = task_count
             completed = task_count - self._plays.value[idx]["__in progress"]
             if completed:
-                new = floor((completed / task_count * 100))
+                new = floor(completed / task_count * 100)
                 current = self._plays.value[idx].get("__percent_complete", 0)
                 self._plays.value[idx]["__percent_complete"] = max(new, current)
                 self._plays.value[idx]["__progress"] = str(max(new, current)) + "%"
@@ -854,7 +850,7 @@ class Action(ActionBase):
                 self._runner_finished = True
                 self._notify_no_tasks_redirect()
 
-    def _get_status(self) -> Tuple[str, int]:
+    def _get_status(self) -> tuple[str, int]:
         """Get the runner status and color for status message.
 
         :returns: status string, status color
@@ -882,7 +878,7 @@ class Action(ActionBase):
         status, status_color = self._get_status()
         self._interaction.ui.update_status(status, status_color)
 
-    def write_artifact(self, filename: Optional[str] = None) -> None:
+    def write_artifact(self, filename: str | None = None) -> None:
         """Write the artifact.
 
         :param filename: The file to write to
@@ -926,7 +922,7 @@ class Action(ActionBase):
                 )
                 self._logger.info("Saved artifact as %s", filename)
 
-            except (IOError, OSError) as exc:
+            except OSError as exc:
                 error = (
                     f"Saving the artifact file failed, resulted in the following error: f{str(exc)}"
                 )

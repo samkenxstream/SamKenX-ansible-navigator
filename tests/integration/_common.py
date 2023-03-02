@@ -1,27 +1,32 @@
+# cspell: ignore fspath
 """Common functions for the tests."""
+from __future__ import annotations
+
 import json
 import os
 import re
 import shutil
 import sys
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import Callable
 
 import pytest
 
 from .. import defaults
 
 
-def get_executable_path(name):
-    """get the path of an executable"""
+def get_executable_path(name: str) -> str:
+    """Get the path of an executable.
+
+    :param name: The name of the executable
+    :raises ValueError: If the executable is not found
+    :returns: The path of the executable
+    """
     if name == "python":
-        exec_path = sys.executable
-    else:
-        exec_path = shutil.which(name)
+        return sys.executable
+    exec_path = shutil.which(name)
     if not exec_path:
         raise ValueError(f"{name} executable not found")
     return exec_path
@@ -30,8 +35,8 @@ def get_executable_path(name):
 def retrieve_fixture_for_step(
     request: pytest.FixtureRequest,
     step_index: int,
-    test_name: Optional[str] = None,
-) -> List[str]:
+    test_name: str | None = None,
+) -> list[str]:
     """Retrieve a fixture based on the test request and step index.
 
     :param request: The current test request
@@ -48,12 +53,12 @@ def retrieve_fixture_for_step(
 def update_fixtures(
     request: pytest.FixtureRequest,
     index: int,
-    received_output: List[str],
+    received_output: list[str],
     comment: str,
-    testname: Optional[str] = None,
-    additional_information: Optional[Dict[str, Union[List[str], bool]]] = None,
+    testname: str | None = None,
+    additional_information: dict[str, list[str] | bool] | None = None,
     zfill_index: int = 1,
-):
+) -> None:
     # pylint: disable=too-many-arguments
     """Write out a test fixture.
 
@@ -83,8 +88,8 @@ def update_fixtures(
     if additional_information is not None:
         fixture["additional_information"] = additional_information
         if additional_information.get("present"):
-            received_output = sanitize_output(received_output)
-    fixture["output"] = received_output
+            received_output_list = sanitize_output(received_output)
+    fixture["output"] = received_output_list
     with fixture_path.open(mode="w", encoding="utf8") as fh:
         json.dump(fixture, fh, indent=4, ensure_ascii=False, sort_keys=False)
         fh.write("\n")
@@ -93,7 +98,7 @@ def update_fixtures(
 def fixture_path_from_request(
     request: pytest.FixtureRequest,
     index: int,
-    testname: Optional[str] = None,
+    testname: str | None = None,
     suffix: str = ".json",
     zfill_index: int = 1,
 ) -> Path:
@@ -115,45 +120,57 @@ def fixture_path_from_request(
     return dir_path / file_name
 
 
-def generate_test_log_dir(unique_test_id):
-    """Generate a log directory for a test given it's request"""
-    user = os.environ.get("USER")
-    if user == "zuul":
-        directory = os.path.join(
-            "/",
-            "home",
-            "zuul",
-            "zuul-output",
-            "logs",
-            "ansible-navigator",
-            unique_test_id,
-        )
-    else:
-        directory = os.path.join("./", ".test_logs", unique_test_id)
-    os.makedirs(directory, exist_ok=True)
-    return directory
+def generate_test_log_dir(request: pytest.FixtureRequest) -> Path:
+    """Return a log directory for a test given it's request.
+
+    :param request: The test request
+    :returns: The path for the log file
+    """
+    test_path = Path(request.path)
+    test_parts = list(test_path.parts)
+    test_parts[test_parts.index("tests")] = ".test_logs"
+
+    # Clean the test name to be a valid path
+    test_name = re.sub(r"[^\w\s-]", "_", request.node.name.lower())
+    test_name = re.sub(r"[-\s]+", "-", test_name).strip("-_")
+
+    path = Path(*test_parts) / test_name
+
+    path.mkdir(parents=True, exist_ok=True)
+    return path / "ansible-navigator.log"
 
 
 class Error(EnvironmentError):
-    """pass through err"""
+    """Pass through error."""
 
 
-def sanitize_output(output):
-    """Sanitize test output that may be environment specific or unique per run."""
+def sanitize_output(output: list[str]) -> list[str]:
+    """Sanitize test output that may be environment specific or unique per run.
+
+    :param output: The output to sanitize
+    :returns: The sanitized output
+    """
     re_uuid = re.compile(
         "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
         re.IGNORECASE,
     )
     re_home = re.compile("(/Users|/home)/(?!runner)[a-z,0-9]*/")
+    re_python_version = re.compile(r"python3\.\d{2}")
     for idx, line in enumerate(output):
         new_line = re.sub(re_uuid, "00000000-0000-0000-0000-000000000000", line)
-
         new_line = re.sub(re_home, "/home/user/", new_line)
+        new_line = re.sub(re_python_version, "python3.XX", new_line)
         output[idx] = new_line
     return output
 
 
-def copytree(src, dst, symlinks=False, ignore=None, dirs_exist_ok=False):
+def copytree(
+    src: str,
+    dst: str,
+    symlinks: bool = False,
+    ignore: Callable | None = None,
+    dirs_exist_ok: bool = False,
+):
     """Recursively copy a directory tree using copy2().
 
     The destination directory must not already exist.
@@ -175,6 +192,13 @@ def copytree(src, dst, symlinks=False, ignore=None, dirs_exist_ok=False):
     called once for each directory that is copied. It returns a
     list of names relative to the `src` directory that should
     not be copied.
+
+    :param src: Source directory
+    :param dst: Destination directory
+    :param symlinks: Copy symlinks
+    :param ignore: Callable to ignore files
+    :param dirs_exist_ok: Do not raise an exception if the destination directory exists
+    :raises Error: If an error occurs
     """
     names = os.listdir(src)
     if ignore is not None:
@@ -208,7 +232,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dirs_exist_ok=False):
         # continue with other files
         except Error as err:
             errors.extend(err.args[0])
-        except EnvironmentError as why:
+        except OSError as why:
             errors.append((source_path, destination_path, str(why)))
     try:
         shutil.copystat(src, dst)
@@ -216,3 +240,14 @@ def copytree(src, dst, symlinks=False, ignore=None, dirs_exist_ok=False):
         errors.append((src, dst, str(why)))
     if errors:
         raise Error(errors)
+
+
+@dataclass
+class Parameter:
+    """Simple class to contain a name and parameter.
+
+    Used with CliRunner in conftest.py
+    """
+
+    name: str
+    value: bool | str | list | Path

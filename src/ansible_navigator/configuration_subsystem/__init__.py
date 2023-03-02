@@ -1,7 +1,6 @@
 """The configuration subsystem for Ansible Navigator."""
 
 from .configurator import Configurator
-from .definitions import ApplicationConfiguration
 from .definitions import Constants
 from .definitions import SettingsEntry
 from .definitions import SettingsFileType
@@ -17,7 +16,6 @@ from .transform import to_sources
 
 
 __all__ = (
-    "ApplicationConfiguration",
     "Configurator",
     "Constants",
     "NavigatorConfiguration",

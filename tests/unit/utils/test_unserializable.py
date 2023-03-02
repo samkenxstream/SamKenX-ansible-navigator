@@ -1,32 +1,34 @@
 """Tests for content that cannot be serialized."""
+from __future__ import annotations
+
 from collections import deque
-from typing import Tuple
 
 import pytest
 
 from ansible_navigator.content_defs import ContentView
 from ansible_navigator.utils.serialize import SerializationFormat
 from ansible_navigator.utils.serialize import serialize
+from ...defaults import id_func
 
 
 content_views = pytest.mark.parametrize(
     argnames="content_view",
     argvalues=ContentView.__members__.items(),
-    ids=ContentView.__members__,
+    ids=id_func,
 )
 
 serialization_formats = pytest.mark.parametrize(
     argnames="serialization_format",
     argvalues=SerializationFormat.__members__.items(),
-    ids=SerializationFormat.__members__,
+    ids=id_func,
 )
 
 
 @serialization_formats
 @content_views
 def test_custom_class(
-    content_view: Tuple[str, ContentView],
-    serialization_format: Tuple[str, SerializationFormat],
+    content_view: tuple[str, ContentView],
+    serialization_format: tuple[str, SerializationFormat],
 ):
     """Ensure an error is provided when something can't be serialized.
 
@@ -54,8 +56,8 @@ def test_custom_class(
 @serialization_formats
 @content_views
 def test_deque(
-    content_view: Tuple[str, ContentView],
-    serialization_format: Tuple[str, SerializationFormat],
+    content_view: tuple[str, ContentView],
+    serialization_format: tuple[str, SerializationFormat],
 ):
     """Ensure an error is provided when something can't be serialized.
 

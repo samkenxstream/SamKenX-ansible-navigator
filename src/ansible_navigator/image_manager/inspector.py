@@ -1,9 +1,8 @@
 """Definitions for image inspection."""
+from __future__ import annotations
+
 import json
 import re
-
-from typing import List
-from typing import Tuple
 
 from ..command_runner import Command
 from ..command_runner import CommandRunner
@@ -23,7 +22,7 @@ class ImagesInspect:
         self._image_ids = ids
 
     @property
-    def commands(self) -> List[Command]:
+    def commands(self) -> list[Command]:
         """Generate image inspection commands.
 
         :returns: List of image inspection command objects
@@ -59,7 +58,7 @@ class ImagesList:
         self._container_engine = container_engine
 
     @property
-    def commands(self) -> List[Command]:
+    def commands(self) -> list[Command]:
         """Generate image lister commands.
 
         :returns: List of the image lister commands
@@ -87,7 +86,7 @@ class ImagesList:
             command.details = valid_images
 
 
-def inspect_all(container_engine: str) -> Tuple[List, str]:
+def inspect_all(container_engine: str) -> tuple[list, str]:
     """Run inspect against all images in the list.
 
     :param container_engine: Name of the container engine
@@ -95,7 +94,7 @@ def inspect_all(container_engine: str) -> Tuple[List, str]:
     """
     cmd_runner = CommandRunner()
     images_list_class = ImagesList(container_engine=container_engine)
-    result = cmd_runner.run_single_proccess(commands=images_list_class.commands)
+    result = cmd_runner.run_single_process(commands=images_list_class.commands)
     images_list = result[0]
     if images_list.errors:
         return [], images_list.errors
@@ -104,7 +103,7 @@ def inspect_all(container_engine: str) -> Tuple[List, str]:
     images = {image["image_id"]: image for image in images_list.details}
     image_ids = [image["image_id"] for image in images.values()]
     images_inspect_class = ImagesInspect(container_engine=container_engine, ids=image_ids)
-    inspects = cmd_runner.run_single_proccess(commands=images_inspect_class.commands)
+    inspects = cmd_runner.run_single_process(commands=images_inspect_class.commands)
     for inspect in inspects:
         images[inspect.identity]["inspect"] = {"details": inspect.details, "errors": inspect.errors}
     return list(images.values()), images_list.stderr

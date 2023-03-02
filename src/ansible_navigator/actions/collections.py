@@ -1,4 +1,6 @@
 """Collections subcommand implementation."""
+from __future__ import annotations
+
 import curses
 import json
 import os
@@ -9,16 +11,12 @@ from copy import deepcopy
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 from typing import cast
 
 from ..action_base import ActionBase
 from ..action_defs import RunStdoutReturn
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..content_defs import ContentFormat
 from ..runner import Command
 from ..steps import Step
@@ -36,7 +34,7 @@ from . import _actions as actions
 from . import run_action
 
 
-def color_menu(colno: int, colname: str, entry: Dict[str, Any]) -> Tuple[int, int]:
+def color_menu(colno: int, colname: str, entry: dict[str, Any]) -> tuple[int, int]:
     # pylint: disable=unused-argument
     """Provide a color for a collections menu entry in one column.
 
@@ -52,7 +50,7 @@ def color_menu(colno: int, colname: str, entry: Dict[str, Any]) -> Tuple[int, in
     return 2, 0
 
 
-def content_heading(obj: Any, screen_w: int) -> Optional[CursesLines]:
+def content_heading(obj: Any, screen_w: int) -> CursesLines | None:
     """Create a heading for collection content.
 
     :param obj: The content going to be shown
@@ -77,7 +75,7 @@ def content_heading(obj: Any, screen_w: int) -> Optional[CursesLines]:
     return CursesLines((CursesLine((line_1_part_1,)), CursesLine((line_2_part_1,))))
 
 
-def filter_content_keys(obj: Dict[Any, Any]) -> Dict[Any, Any]:
+def filter_content_keys(obj: dict[Any, Any]) -> dict[Any, Any]:
     """Filter out some keys when showing collection content.
 
     :param obj: The object from which keys should be removed
@@ -101,15 +99,15 @@ class Action(ActionBase):
         self._adjacent_collection_dir: str
         self._collection_cache: KeyValueStore
         self._collection_cache_path: str
-        self._collection_scanned_paths: List = []
-        self._collections: List = []
-        self._stats: Dict = {}
+        self._collection_scanned_paths: list = []
+        self._collections: list = []
+        self._stats: dict = {}
 
     def update(self) -> None:
         """Request calling app update, no collection update is required."""
         self._calling_app.update()
 
-    def run(self, interaction: Interaction, app: AppPublic) -> Optional[Interaction]:
+    def run(self, interaction: Interaction, app: AppPublic) -> Interaction | None:
         """Execute the ``collections`` request for mode interactive.
 
         :param interaction: The interaction from the user
@@ -209,8 +207,7 @@ class Action(ActionBase):
 
         print_to_stdout(
             content=collections_info,
-            content_format=ContentFormat.YAML,
-            share_directory=self._args.internals.share_directory,
+            content_format=getattr(ContentFormat, self._args.format.upper()),
             use_color=self._args.display_color,
         )
         return RunStdoutReturn(message="", return_code=0)
@@ -488,12 +485,14 @@ class Action(ActionBase):
             self._parse(output)
 
     def _parse(self, output) -> None:
-        # pylint: disable=too-many-branches
         """Load and process the ``json`` output from the collection cataloging process.
 
         :param output: The output from the collection cataloging process
         :returns: Nothing
         """
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-statements
         try:
             if not output.startswith("{"):
                 _warnings, json_str = output.split("{", 1)
@@ -515,12 +514,36 @@ class Action(ActionBase):
             list(parsed["collections"].values()),
             key=lambda i: i["known_as"],
         )
+        volume_mounts = self.app.args.execution_environment_volume_mounts
+        if isinstance(volume_mounts, list):
+            tmp_list = []
+            for mount in volume_mounts:
+                source_str, destination_str = mount.split(":")[0:2]
+                if not Path(source_str).is_dir():
+                    continue
+                dest_path = Path(destination_str)
+                # /x/ansible_collections/co:/x/ansible_collections/co
+                if dest_path.parent.name == "ansible_collections":
+                    continue
+                # /x/ansible_collections/co/ns:/x/ansible_collections/co/ns
+                if dest_path.parent.parent.name == "ansible_collections":
+                    continue
+                # /x:/x
+                if dest_path.name != "ansible_collections":
+                    dest_path /= "ansible_collections"
+                tmp_list.append(str(dest_path))
+            dest_volume_mounts = tuple(tmp_list)
+        else:
+            dest_volume_mounts = tuple()
+
         for collection in self._collections:
             collection["__name"] = collection["known_as"]
             collection["__version"] = collection["collection_info"].get("version", "missing")
             collection["__shadowed"] = bool(collection["hidden_by"])
             if self._args.execution_environment:
-                if collection["path"].startswith(self._adjacent_collection_dir):
+                if collection["path"].startswith(dest_volume_mounts):
+                    collection["__type"] = "bind_mount"
+                elif collection["path"].startswith(self._adjacent_collection_dir):
                     collection["__type"] = "bind_mount"
                 elif collection["path"].startswith(os.path.dirname(self._adjacent_collection_dir)):
                     collection["__type"] = "bind_mount"
@@ -553,16 +576,15 @@ class Action(ActionBase):
 
         return None
 
-    def _get_collection_plugins_details(self, selected_collection: Dict) -> Dict:
+    def _get_collection_plugins_details(self, selected_collection: dict) -> dict:
         """Get plugin details for the given collection.
 
         :param selected_collection: The selected collection
         :returns: The plugin details like full-name, type and short description.
         """
-        plugins_details: Dict = {}
+        plugins_details: dict = {}
 
         for plugin_checksum, plugin_info in selected_collection["plugin_checksums"].items():
-
             plugin_type = plugin_info.get("type")
             if plugin_type not in plugins_details:
                 plugins_details[plugin_type] = []
@@ -591,13 +613,13 @@ class Action(ActionBase):
 
         return plugins_details
 
-    def _parse_collection_info_stdout(self) -> Dict:
+    def _parse_collection_info_stdout(self) -> dict:
         # pylint: disable=too-many-nested-blocks
         """Parse collection information from catalog collection cache.
 
         :returns: The collection information to be displayed on stdout
         """
-        collections_info: Dict = {
+        collections_info: dict = {
             "collections": [],
         }
         collection_exclude_keys = [
@@ -614,7 +636,7 @@ class Action(ActionBase):
         for collection in self._collections:
             plugins_details = self._get_collection_plugins_details(collection)
 
-            collection_stdout: Dict = {}
+            collection_stdout: dict = {}
             for info_name, info_value in collection.items():
                 info_name = remove_dbl_un(info_name)
                 if info_name in collection_exclude_keys:

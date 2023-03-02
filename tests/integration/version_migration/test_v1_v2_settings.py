@@ -44,11 +44,10 @@ def test_all(
     shutil.copy(source, destination)
 
     with TmuxSession(
-        unique_test_id=request.node.name.replace(".", "-"),
+        request=request,
         config_path=destination,
         cwd=tmp_path,
     ) as session:
-
         session.interaction(
             value="ansible-navigator --version",
             search_within_response="Do you want to run them all?",
@@ -68,6 +67,8 @@ def test_all(
     if os.environ.get("ANSIBLE_NAVIGATOR_UPDATE_TEST_FIXTURES") == "true":
         shutil.copy(destination, corrected)
 
-    assert "ansible-navigator 2." in result[-3]
+    assert any(
+        "ansible-navigator 2." in line for line in result
+    ), "(Note: requires recent tags, `git fetch --all`)"
     assert filecmp.cmp(destination, corrected)
     assert filecmp.cmp(source, backup)

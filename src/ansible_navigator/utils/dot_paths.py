@@ -1,14 +1,12 @@
 """Utilities for working with dictionaries using paths."""
+from __future__ import annotations
+
 import copy
 import operator
 
 from enum import Enum
 from functools import reduce
-from typing import Dict
-from typing import List
 from typing import MutableMapping
-from typing import Tuple
-from typing import Union
 
 
 class MergeBehaviors(Enum):
@@ -96,11 +94,11 @@ def remove_and_delete_empty_ascendants(content: MutableMapping, path: str):
 
 
 def place_at_path(
-    behaviors: Tuple[MergeBehaviors, ...],
-    content: Dict,
+    behaviors: tuple[MergeBehaviors, ...],
+    content: dict,
     path: str,
-    value: Union[bool, int, list, float, str, List, Dict],
-) -> Dict:
+    value: bool | int | list | float | str | list | dict,
+) -> dict:
     """Place a value at a path in a dictionary.
 
     :param behaviors: The merge behaviors
@@ -175,11 +173,11 @@ def place_at_path(
 
 
 def move_to_path(
-    behaviors: Tuple[MergeBehaviors, ...],
-    content: Dict,
+    behaviors: tuple[MergeBehaviors, ...],
+    content: dict,
     new_path: str,
     old_path: str,
-) -> Dict:
+) -> dict:
     """Move a value to a path in a dictionary.
 
     :param behaviors: The merge behaviors

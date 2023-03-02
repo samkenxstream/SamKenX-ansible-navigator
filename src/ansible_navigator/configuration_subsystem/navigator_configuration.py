@@ -1,13 +1,11 @@
 """The ansible-navigator configuration."""
+from __future__ import annotations
+
 import logging
 import os
 
 from dataclasses import dataclass
 from dataclasses import field
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from ..utils.definitions import ExitMessage
 from ..utils.definitions import LogMessage
@@ -15,6 +13,7 @@ from ..utils.functions import abs_user_path
 from ..utils.functions import get_share_directory
 from ..utils.functions import oxfordcomma
 from ..utils.key_value_store import KeyValueStore
+from ..utils.packaged_data import ImageEntry
 from .definitions import ApplicationConfiguration
 from .definitions import CliParameters
 from .definitions import Constants as C
@@ -27,8 +26,8 @@ from .utils import AnsibleConfiguration
 
 APP_NAME = "ansible_navigator"
 
-initialization_messages: List[LogMessage] = []
-initialization_exit_messages: List[ExitMessage] = []
+initialization_messages: list[LogMessage] = []
+initialization_exit_messages: list[ExitMessage] = []
 
 PLUGIN_TYPES = (
     "become",
@@ -95,13 +94,13 @@ class Internals:
     """Place to hold an object that needs to be used from app initiation through whole app."""
 
     ansible_configuration: AnsibleConfiguration = field(default_factory=AnsibleConfiguration)
-    action_packages: Tuple[str] = ("ansible_navigator.actions",)
-    collection_doc_cache: Union[C, KeyValueStore] = C.NOT_SET
+    action_packages: tuple[str] = ("ansible_navigator.actions",)
+    collection_doc_cache: C | KeyValueStore = C.NOT_SET
     initializing: bool = False
     """This is an initial run (app starting for the first time)."""
     initialization_exit_messages = initialization_exit_messages
     initialization_messages = initialization_messages
-    settings_file_path: Optional[str] = None
+    settings_file_path: str | None = None
     settings_source: C = C.NOT_SET
     share_directory: str = generate_share_directory()
 
@@ -181,7 +180,7 @@ navigator_subcommands = [
             " in it. If not using an execution environment, ansible-lint must"
             " be installed on your system."
         ),
-        version_added="v1.0",
+        version_added="v2.0",
     ),
     SubCommand(
         name="replay",
@@ -333,6 +332,16 @@ NavigatorConfiguration = ApplicationConfiguration(
             version_added="v1.0",
         ),
         SettingsEntry(
+            name="enable_prompts",
+            choices=[True, False],
+            cli_parameters=CliParameters(short="--ep", action="store_true"),
+            short_description="Enable prompts for password and in playbooks. This will set"
+            " mode to stdout and disable playbook artifact creation",
+            subcommands=["run"],
+            value=SettingsEntryValue(default=False),
+            version_added="v2.3",
+        ),
+        SettingsEntry(
             name="exec_command",
             cli_parameters=CliParameters(positional=True),
             settings_file_path_override="exec.command",
@@ -365,7 +374,10 @@ NavigatorConfiguration = ApplicationConfiguration(
             cli_parameters=CliParameters(short="--eei"),
             settings_file_path_override="execution-environment.image",
             short_description="Specify the name of the execution environment image",
-            value=SettingsEntryValue(default="quay.io/ansible/creator-ee:v0.4.2"),
+            value=SettingsEntryValue(
+                default=ImageEntry.DEFAULT_EE.get(app_name=APP_NAME),
+                schema_default=C.NONE,
+            ),
             version_added="v1.0",
         ),
         SettingsEntry(
@@ -380,6 +392,15 @@ NavigatorConfiguration = ApplicationConfiguration(
             ),
             value=SettingsEntryValue(),
             version_added="v1.0",
+        ),
+        SettingsEntry(
+            name="format",
+            choices=["json", "yaml"],
+            cli_parameters=CliParameters(short="--fmt"),
+            short_description="Specify the format for stdout output.",
+            subcommands=["collections"],
+            value=SettingsEntryValue(default="yaml"),
+            version_added="v2.3",
         ),
         SettingsEntry(
             name="help_builder",
@@ -572,6 +593,7 @@ NavigatorConfiguration = ApplicationConfiguration(
             name="playbook_artifact_enable",
             choices=[True, False],
             cli_parameters=CliParameters(short="--pae"),
+            delay_post_process=True,
             settings_file_path_override="playbook-artifact.enable",
             short_description="Enable or disable the creation of artifacts for"
             " completed playbooks. Note: not compatible with '--mode stdout' when playbooks"
@@ -595,7 +617,7 @@ NavigatorConfiguration = ApplicationConfiguration(
             settings_file_path_override="playbook-artifact.save-as",
             short_description=(
                 "Specify the name for artifacts created from completed playbooks."
-                "The following placeholders are available: {playbook_dir}, {playbook_name},"
+                " The following placeholders are available: {playbook_dir}, {playbook_name},"
                 " {playbook_status}, and {time_stamp}"
             ),
             subcommands=["run"],

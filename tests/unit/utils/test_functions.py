@@ -1,23 +1,26 @@
 """Test the functions exposed in the :mod:`~ansible_navigator.utils.functions` subpackage."""
+from __future__ import annotations
+
 import os
 import re
 
 from pathlib import Path
-from typing import List
 from typing import NamedTuple
-from typing import Optional
-from typing import Union
 
 import pytest
 
 from ansible_navigator.utils import functions
+from tests.defaults import id_func
 
 
 EXTENSIONS = [".yml", ".yaml", ".json"]
 
 
 def test_find_many_settings_home(monkeypatch) -> None:
-    """test more than one in home"""
+    """Test more than one in home.
+
+    :param monkeypatch: The monkeypatch fixture
+    """
     paths = [
         os.path.join(os.path.expanduser("~"), ".ansible-navigator" + ext) for ext in EXTENSIONS
     ]
@@ -32,7 +35,10 @@ def test_find_many_settings_home(monkeypatch) -> None:
 
 
 def test_find_many_settings_cwd(monkeypatch) -> None:
-    """test more than one in CWD"""
+    """Test more than one in CWD.
+
+    :param monkeypatch: The monkeypatch fixture
+    """
     paths = [os.path.join(os.getcwd(), "ansible-navigator" + ext) for ext in EXTENSIONS]
 
     def check_path_exists(arg):
@@ -45,7 +51,10 @@ def test_find_many_settings_cwd(monkeypatch) -> None:
 
 
 def test_find_many_settings_precedence(monkeypatch) -> None:
-    """test more than one in CWD"""
+    """Test more than one in CWD.
+
+    :param monkeypatch: The monkeypatch fixture
+    """
     expected = os.path.join(os.getcwd(), "ansible-navigator.yml")
     paths = [expected, os.path.join(os.path.expanduser("~"), ".ansible-navigator.json")]
 
@@ -58,25 +67,31 @@ def test_find_many_settings_precedence(monkeypatch) -> None:
 
 
 @pytest.mark.parametrize(
-    "set_env, file_path, anticpated_result",
+    "set_env, file_path, anticipated_result",
     (
         (True, os.path.abspath(__file__), os.path.abspath(__file__)),
         (True, "", None),
         (False, None, None),
     ),
     ids=[
-        "set and valid",
-        "set and invalid",
-        "not set",
+        "set-and-valid",
+        "set-and-invalid",
+        "not-set",
     ],
 )
 def test_env_var_is_file_path(
     monkeypatch,
     set_env: bool,
     file_path: str,
-    anticpated_result: Optional[str],
+    anticipated_result: str | None,
 ) -> None:
-    """test environment variable is a file path"""
+    """Test environment variable is a file path.
+
+    :param monkeypatch: The monkeypatch fixture
+    :param set_env: To set or not to set the env var
+    :param file_path: File path to set env var to
+    :param anticipated_result: Expected outcome for assertion
+    """
     env_var = "ANSIBLE_NAVIGATOR_CONFIG"
     if set_env:
         monkeypatch.setenv(env_var, file_path)
@@ -84,11 +99,11 @@ def test_env_var_is_file_path(
         env_var,
         "config",
     )
-    assert result == anticpated_result
+    assert result == anticipated_result
 
 
 @pytest.mark.parametrize(
-    "value, anticpated_result",
+    "value, anticipated_result",
     (
         ([1, 2, 3], [1, 2, 3]),
         ([1, 2, [3]], [1, 2, 3]),
@@ -96,30 +111,34 @@ def test_env_var_is_file_path(
     ),
     ids=[
         "simple",
-        "list with one list",
-        "list detailed",
+        "list-with-one-list",
+        "list-detailed",
     ],
 )
-def test_flatten_list(value: List, anticpated_result: List) -> None:
-    """test for flatten list"""
+def test_flatten_list(value: list, anticipated_result: list) -> None:
+    """Test for flatten list.
+
+    :param value: List to be flattened
+    :param anticipated_result: Expected outcome for assertion
+    """
     actual_result = functions.flatten_list(value)
-    assert list(actual_result) == anticpated_result
+    assert list(actual_result) == anticipated_result
 
 
 class HumanTimeTestData(NamedTuple):
     """Data for human time test."""
 
     id: str
-    value: Union[int, float]
+    value: int | float
     expected: str
 
 
 human_time_test_data = [
-    HumanTimeTestData(id="seconds", value=1, expected="1s"),
-    HumanTimeTestData(id="minutes seconds", value=60 + 1, expected="1m1s"),
-    HumanTimeTestData(id="hours minutes seconds", value=3600 + 60 + 1, expected="1h1m1s"),
+    HumanTimeTestData(id="s", value=1, expected="1s"),
+    HumanTimeTestData(id="m-s", value=60 + 1, expected="1m1s"),
+    HumanTimeTestData(id="h-m-s", value=3600 + 60 + 1, expected="1h1m1s"),
     HumanTimeTestData(
-        id="days hours minutes seconds",
+        id="d-h-m-s",
         value=86400 + 3600 + 60 + 1,
         expected="1d1h1m1s",
     ),
@@ -131,16 +150,20 @@ def test_human_time_integer(data: HumanTimeTestData) -> None:
     """Test for the functions.human_time function (integer passed).
 
     Ensure the integer passed is correctly transformed into a human readable time string.
+
+    :param data: Time data in human-readable format
     """
     result = functions.human_time(data.value)
     assert result == data.expected
 
 
-@pytest.mark.parametrize("data", human_time_test_data, ids=lambda data: data.id)
+@pytest.mark.parametrize("data", human_time_test_data, ids=id_func)
 def test_human_time_negative_integer(data: HumanTimeTestData) -> None:
     """Test for the functions.human_time function (negative integer passed).
 
     Ensure the negative integer passed is correctly transformed into a human readable time string.
+
+    :param data: Time data in human-readable format
     """
     result = functions.human_time(-data.value)
     assert result == f"-{data.expected}"
@@ -151,6 +174,8 @@ def test_human_time_float(data: HumanTimeTestData) -> None:
     """Test for the functions.human_time function (float passed).
 
     Ensure the float passed is correctly transformed into a human readable time string.
+
+    :param data: Time data in human-readable format
     """
     result = functions.human_time(float(data.value))
     assert result == data.expected
@@ -161,6 +186,8 @@ def test_human_time_negative_float(data: HumanTimeTestData) -> None:
     """Test for the functions.human_time function (negative float passed).
 
     Ensure the negative float passed is correctly transformed into a human readable time string.
+
+    :param data: Time data in human-readable format
     """
     result = functions.human_time(-float(data.value))
     assert result == f"-{data.expected}"
@@ -170,17 +197,17 @@ class RoundHalfUpTestData(NamedTuple):
     """Data for round half up tests."""
 
     id: str
-    value: Union[int, float]
+    value: int | float
     expected: int
 
 
 round_half_up_test_data = [
     RoundHalfUpTestData(id="integer", value=1, expected=1),
-    RoundHalfUpTestData(id="negative integer", value=-1, expected=-1),
-    RoundHalfUpTestData(id="down float", value=1.49999999, expected=1),
-    RoundHalfUpTestData(id="up float", value=1.50000001, expected=2),
-    RoundHalfUpTestData(id="negative down float", value=-1.49999999, expected=-1),
-    RoundHalfUpTestData(id="negative up float", value=-1.50000001, expected=-2),
+    RoundHalfUpTestData(id="negative-integer", value=-1, expected=-1),
+    RoundHalfUpTestData(id="down-float", value=1.49999999, expected=1),
+    RoundHalfUpTestData(id="up-float", value=1.50000001, expected=2),
+    RoundHalfUpTestData(id="negative-down-float", value=-1.49999999, expected=-1),
+    RoundHalfUpTestData(id="negative-up-float", value=-1.50000001, expected=-2),
     RoundHalfUpTestData(id="half_even", value=2.5, expected=3),
     RoundHalfUpTestData(id="half_even", value=3.5, expected=4),
 ]
@@ -192,6 +219,8 @@ def test_round_half_up(data: RoundHalfUpTestData) -> None:
 
     Ensure the number passed is consistently rounded to the nearest
     integer with ties going away from zero.
+
+    :param data: Test object
     """
     result = functions.round_half_up(data.value)
     assert result == data.expected
@@ -222,7 +251,15 @@ iso8601 = re.compile(
 )
 
 
-@pytest.mark.parametrize("time_zone", ("local", "America/Los_Angeles", "UTC", "bogus"))
+@pytest.mark.parametrize(
+    "time_zone",
+    (
+        pytest.param("local", id="0"),
+        pytest.param("America/Los_Angeles", id="1"),
+        pytest.param("UTC", id="2"),
+        pytest.param("bogus", id="3"),
+    ),
+)
 def test_now_iso(caplog: pytest.LogCaptureFixture, time_zone: str):
     """Test the using local as a time zone.
 

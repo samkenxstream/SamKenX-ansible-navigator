@@ -1,13 +1,12 @@
 """Tests for the transformation of settings to a json schema."""
 
-
-from typing import Tuple
+from __future__ import annotations
 
 from ansible_navigator.utils.serialize import Loader
 from ansible_navigator.utils.serialize import yaml
 
 
-def test_valid_yaml(settings_samples: Tuple[str, str]):
+def test_valid_yaml(settings_samples: tuple[str, str]):
     """Simple test to ensure the sample is valid yaml.
 
     :param settings_samples: The sample setting
@@ -19,7 +18,7 @@ def test_valid_yaml(settings_samples: Tuple[str, str]):
     assert settings_contents
 
 
-def test_no_un_templated(settings_samples: Tuple[str, str]):
+def test_no_un_templated(settings_samples: tuple[str, str]):
     """Simple test to ensure the sample is valid yaml.
 
     :param settings_samples: The sample settings

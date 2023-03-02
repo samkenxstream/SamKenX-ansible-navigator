@@ -1,12 +1,11 @@
 """Common definitions for a version migration."""
+from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
 from typing import Callable
 from typing import Generic
 from typing import List
-from typing import Optional
-from typing import Tuple
 from typing import Type
 from typing import TypeVar
 
@@ -39,7 +38,7 @@ class MigrationStep(Generic[T]):
         """The name of the migration step"""
         self.needed: bool = False
         """Whether the migration step is needed"""
-        self.function_name: Optional[str] = None
+        self.function_name: str | None = None
         """The name of the function to call"""
 
     def print_start(self):
@@ -114,12 +113,12 @@ class Migration:
         migrations.append(cls)
 
     @property
-    def migration_steps(self) -> Tuple[MigrationStep, ...]:
+    def migration_steps(self) -> tuple[MigrationStep, ...]:
         """Return the registered diagnostics.
 
         :returns: The registered diagnostics
         """
-        steps: List[MigrationStep] = []
+        steps: list[MigrationStep] = []
         for func_name in vars(self.__class__):
             if func_name.startswith("_"):
                 continue
@@ -134,7 +133,7 @@ class Migration:
 
         :returns: Whether the migration is needed
         """
-        return any((step.needed for step in self.migration_steps))
+        return any(step.needed for step in self.migration_steps)
 
     def run(self, *args, **kwargs) -> None:
         """Run the migration.

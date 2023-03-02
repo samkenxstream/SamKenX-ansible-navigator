@@ -22,7 +22,7 @@ base_steps = (
     UiTestStep(
         user_input=":f",
         comment="clear filter, full list",
-        present=["Ansible runner artifact dir", "Help playbook"],
+        present=["Ansible runner artifact dir", "Help doc"],
         mask=True,
     ),
     UiTestStep(user_input=":f Exec", comment="filter using a different index"),
@@ -31,7 +31,7 @@ base_steps = (
     UiTestStep(
         user_input=":f",
         comment="clear filter, full list",
-        present=["Ansible runner artifact dir", "Help playbook"],
+        present=["Ansible runner artifact dir", "Help doc"],
         mask=True,
     ),
 )
@@ -56,7 +56,7 @@ class BaseClass:
                 "export ANSIBLE_NAVIGATOR_ANSIBLE_RUNNER_TIMEOUT=42",
                 "export PAGER=cat",
             ],
-            "unique_test_id": request.node.nodeid,
+            "request": request,
             "pane_height": self.PANE_HEIGHT,
             "pane_width": self.PANE_WIDTH,
         }

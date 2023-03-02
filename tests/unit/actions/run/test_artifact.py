@@ -1,11 +1,12 @@
 """Unit tests for artifact creation. in the run action."""
+from __future__ import annotations
+
 import logging
 import os
 import re
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional
 from typing import Pattern
 
 import pytest
@@ -16,6 +17,8 @@ from ansible_navigator.actions.run import Action as action
 from ansible_navigator.configuration_subsystem import NavigatorConfiguration
 from ansible_navigator.configuration_subsystem.definitions import Constants
 from ansible_navigator.initialization import parse_and_update
+from tests.defaults import id_func
+from ....defaults import BaseScenario
 
 
 def make_dirs(*_args, **_kwargs):
@@ -39,15 +42,18 @@ def get_status(*_args, **_kwargs):
 
 
 @dataclass
-class Scenario:
+class Scenario(BaseScenario):
     """The artifact files test data object."""
 
+    # pylint: disable=too-many-instance-attributes
+
     name: str
-    filename: Optional[str]
+    filename: str | None
     playbook: str
-    starts_with: Optional[str] = None
-    re_match: Optional[Pattern] = None
+    starts_with: str | None = None
+    re_match: Pattern | None = None
     help_playbook: bool = False
+    enable_prompts: bool = False
     time_zone: str = "UTC"
 
     def __post_init__(self):
@@ -123,6 +129,13 @@ test_data = [
         help_playbook=True,
     ),
     Scenario(
+        name="Check with enable_prompts",
+        filename=None,
+        playbook="~/site.yaml",
+        starts_with="/home/test_user/site-artifact",
+        enable_prompts=True,
+    ),
+    Scenario(
         name="Filename timezone",
         filename="/tmp/{time_stamp}.json",
         playbook="site.yml",
@@ -138,7 +151,7 @@ test_data = [
 ]
 
 
-@pytest.mark.parametrize("data", test_data, ids=str)
+@pytest.mark.parametrize("data", test_data, ids=id_func)
 def test_artifact_path(
     monkeypatch: pytest.MonkeyPatch,
     mocker: MockerFixture,

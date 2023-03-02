@@ -237,6 +237,15 @@
                     },
                     "type": "object"
                 },
+                "enable-prompts": {
+                    "default": false,
+                    "description": "Enable prompts for password and in playbooks. This will set mode to stdout and disable playbook artifact creation",
+                    "enum": [
+                        true,
+                        false
+                    ],
+                    "type": "boolean"
+                },
                 "exec": {
                     "additionalProperties": false,
                     "properties": {
@@ -304,7 +313,6 @@
                             "type": "object"
                         },
                         "image": {
-                            "default": "quay.io/ansible/creator-ee:v0.4.2",
                             "description": "Specify the name of the execution environment image",
                             "type": "string"
                         },
@@ -357,6 +365,15 @@
                         }
                     },
                     "type": "object"
+                },
+                "format": {
+                    "default": "yaml",
+                    "description": "Specify the format for stdout output.",
+                    "enum": [
+                        "json",
+                        "yaml"
+                    ],
+                    "type": "string"
                 },
                 "images": {
                     "additionalProperties": false,
@@ -449,7 +466,7 @@
                         },
                         "save-as": {
                             "default": "{playbook_dir}/{playbook_name}-artifact-{time_stamp}.json",
-                            "description": "Specify the name for artifacts created from completed playbooks.The following placeholders are available: {playbook_dir}, {playbook_name}, {playbook_status}, and {time_stamp}",
+                            "description": "Specify the name for artifacts created from completed playbooks. The following placeholders are available: {playbook_dir}, {playbook_name}, {playbook_status}, and {time_stamp}",
                             "type": "string"
                         }
                     },
@@ -494,7 +511,7 @@
     "required": [
         "ansible-navigator"
     ],
-    "title": "ansible-navigator settings v2.1",
+    "title": "ansible-navigator settings v2.2",
     "type": "object",
-    "version": "2.1"
+    "version": "2.2"
 }

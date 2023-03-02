@@ -1,7 +1,8 @@
 """Test from the CLI up to to the invocation of runner."""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Dict
 
 import pytest
 
@@ -36,14 +37,15 @@ class Cli2Runner:
 
     def run_test(
         self,
-        mocked_runner: "MagicMock",
+        mocked_runner: MagicMock,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
+        # pylint: disable=unused-argument
         """Confirm execution of ``cli.main()`` produces the desired results.
 
         :param mocked_runner: A patched instance of runner
@@ -52,9 +54,8 @@ class Cli2Runner:
         :param cli_entry: The CLI entry to set as :data:`sys.argv`
         :param config_fixture: The settings fixture
         :param expected: the expected return value
-        :raises Exception: If called
         """
-        raise Exception("Override in subclass")
+        pytest.exit(reason="Override in subclass", returncode=1)
 
     def test_config_interactive(
         self,
@@ -64,7 +65,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
@@ -94,7 +95,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
@@ -124,7 +125,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
@@ -154,7 +155,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
@@ -184,7 +185,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
@@ -214,7 +215,7 @@ class Cli2Runner:
         comment: str,
         cli_entry: str,
         config_fixture: str,
-        expected: Dict[str, str],
+        expected: dict[str, str],
     ):
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument

@@ -1,9 +1,11 @@
 """Check diagnostics output."""
+from __future__ import annotations
+
 import json
+import os
 import subprocess
 
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -14,7 +16,7 @@ from ansible_navigator.utils.functions import remove_ansi
 @pytest.mark.usefixtures("use_venv")
 def test(
     monkeypatch: pytest.MonkeyPatch,
-    settings_env_var_to_full: Tuple[Path, SettingsFileType],
+    settings_env_var_to_full: tuple[Path, SettingsFileType],
     tmp_path: Path,
 ):
     """Test diagnostics generation.
@@ -32,9 +34,8 @@ def test(
         "ansible-navigator --diagnostics",
         check=False,
         shell=True,
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+        capture_output=True,
+        text=True,
     )
     stdout_lines = proc_out.stdout.splitlines()
     assert "Diagnostics written to: " in stdout_lines[-1]
@@ -49,3 +50,7 @@ def test(
     assert local_env_vars["details"]["ANSIBLE_NAVIGATOR_CONFIG"] == str(settings_path)
     for _section_name, section in diagnostics.items():
         assert not section.get("errors")
+
+    # Test the file permissions as well since diagnostics takes time to run
+    status = os.stat(file_name)
+    assert oct(status.st_mode)[-3:] == str(oct(0o600))[-3:]

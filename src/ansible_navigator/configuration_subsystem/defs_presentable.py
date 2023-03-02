@@ -1,13 +1,13 @@
 """Object definitions for the presentable transformation of the settings."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import ClassVar
 from typing import Dict
 from typing import List
 from typing import NewType
-from typing import Optional
 from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -21,8 +21,8 @@ from .utils import create_settings_file_sample
 
 PresentableSettingsEntryValue = Union[bool, Dict, str, List]
 
-TCli = TypeVar("TCli", bound="PresentableCliParameters")
-TEnt = TypeVar("TEnt", bound="PresentableSettingsEntry")
+CliT = TypeVar("CliT", bound="PresentableCliParameters")
+EntT = TypeVar("EntT", bound="PresentableSettingsEntry")
 
 
 @dataclass(frozen=True)
@@ -39,10 +39,10 @@ class PresentableCliParameters:
 
     @classmethod
     def from_cli_params(
-        cls: Type[TCli],
-        cli_parameters: Optional[CliParameters],
+        cls: type[CliT],
+        cli_parameters: CliParameters | None,
         name_dashed: str,
-    ) -> TCli:
+    ) -> CliT:
         """Create an ``_HRCliParameters`` based on an entry's cli parameters.
 
         :param cli_parameters: The entry's cli parameters
@@ -61,7 +61,7 @@ class PresentableSettingsEntry(ContentBase):
     # pylint: disable=too-many-instance-attributes
     """A settings entry in a presentable structure."""
 
-    choices: List
+    choices: list
     """The possible values"""
     current_settings_file: str
     """The path to the current settings file"""
@@ -77,11 +77,11 @@ class PresentableSettingsEntry(ContentBase):
     """The environment variable"""
     name: str
     """The name"""
-    settings_file_sample: Union[str, Dict]
+    settings_file_sample: str | dict
     """A sample settings file snippet"""
     source: str
     """The source of the current value"""
-    subcommands: List
+    subcommands: list
     """A list of subcommands where this entry is available"""
     version_added: str
     """The version this entry was added in"""
@@ -106,11 +106,11 @@ class PresentableSettingsEntry(ContentBase):
 
     @classmethod
     def for_settings_file(
-        cls: Type[TEnt],
-        all_subcommands: List,
+        cls: type[EntT],
+        all_subcommands: list,
         application_name: str,
         internals: Internals,
-    ) -> TEnt:
+    ) -> EntT:
         """Create an ``PresentableSettingsEntry`` containing the details for the settings file.
 
         :param all_subcommands: All application subcommands
@@ -140,12 +140,12 @@ class PresentableSettingsEntry(ContentBase):
 
     @classmethod
     def from_settings_entry(
-        cls: Type[TEnt],
-        all_subcommands: List,
+        cls: type[EntT],
+        all_subcommands: list,
         application_name_dashed: str,
         entry: SettingsEntry,
         settings_file_path: str,
-    ) -> TEnt:
+    ) -> EntT:
         """Create an ``PresentableSettingsEntry`` containing the details for one settings entry.
 
         :param application_name_dashed: The application name, dashed

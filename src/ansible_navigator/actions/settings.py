@@ -1,8 +1,8 @@
 """The ``settings`` subcommand action."""
+from __future__ import annotations
 
 from dataclasses import asdict
 from functools import partial
-from typing import Tuple
 
 from ansible_navigator.configuration_subsystem.definitions import Constants
 from ..action_base import ActionBase
@@ -29,7 +29,7 @@ from . import _actions as actions
 from . import run_action
 
 
-def color_menu(colno: int, colname: str, entry: PresentableSettingsEntry) -> Tuple[int, int]:
+def color_menu(colno: int, colname: str, entry: PresentableSettingsEntry) -> tuple[int, int]:
     # pylint: disable=unused-argument
     """Color the menu.
 
@@ -124,7 +124,6 @@ class Action(ActionBase):
 
         dump = partial(
             print_to_stdout,
-            share_directory=self._args.internals.share_directory,
             use_color=self._args.display_color,
         )
         if self._args.entry("settings_schema").value.source is not Constants.DEFAULT_CFG:

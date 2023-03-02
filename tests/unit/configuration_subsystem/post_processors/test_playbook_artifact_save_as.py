@@ -1,7 +1,8 @@
 """Tests for the playbook artifact save as post processor."""
+from __future__ import annotations
+
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 
@@ -10,14 +11,17 @@ from ansible_navigator.configuration_subsystem import NavigatorConfiguration
 from ansible_navigator.configuration_subsystem.navigator_post_processor import (
     NavigatorPostProcessor,
 )
+from tests.defaults import id_func
+from ....defaults import BaseScenario
 
 
 @dataclass
-class Scenario:
+class Scenario(BaseScenario):
     """Data structure for PAS post processor tests."""
 
-    current: Optional[str] = None
-    expected: Optional[str] = None
+    name: str
+    current: str | None = None
+    expected: str | None = None
     exit_message_substr: str = ""
 
     def __post_init__(self):
@@ -35,12 +39,15 @@ class Scenario:
 
 test_data = (
     Scenario(
+        name="0",
         expected="{playbook_dir}/{playbook_name}-artifact-{time_stamp}.json",
     ),
     Scenario(
+        name="1",
         current="/tmp/artifact.json",
     ),
     Scenario(
+        name="2",
         current="{playbook_dir}/{playbook_name}-artifact-{ts_utc}.json",
         exit_message_substr=(
             "The playbook artifact file name"
@@ -49,6 +56,7 @@ test_data = (
         ),
     ),
     Scenario(
+        name="3",
         current="{name}.json",
         exit_message_substr=(
             "The playbook artifact file name"
@@ -59,7 +67,7 @@ test_data = (
 )
 
 
-@pytest.mark.parametrize(argnames="data", argvalues=test_data, ids=str)
+@pytest.mark.parametrize(argnames="data", argvalues=test_data, ids=id_func)
 def test(data: Scenario):
     """Test the PAS post processor.
 

@@ -1,25 +1,22 @@
 # cspell:ignore A_INVIS
 """Tokenize and color text."""
 
+from __future__ import annotations
+
 import colorsys
 import copy
 import curses
 import functools
 import json
 import logging
-import os
 import re
 
 from itertools import chain
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from ..tm_tokenize.grammars import Grammars
 from ..tm_tokenize.region import Regions
 from ..tm_tokenize.tokenize import tokenize
+from ..utils.compatibility import Traversable
 from .curses_defs import CursesLine
 from .curses_defs import CursesLinePart
 from .curses_defs import CursesLines
@@ -45,7 +42,7 @@ CURSES_STYLES = {
 class ColorSchema:
     """A storage mechanism for the schema (theme)."""
 
-    def __init__(self, schema: Dict[str, Union[str, List, Dict]]):
+    def __init__(self, schema: dict[str, str | list | dict]):
         """Initialize the ColorSchema class.
 
         :param schema: The color scheme, theme to use
@@ -54,7 +51,7 @@ class ColorSchema:
         self._schema = schema
 
     @functools.lru_cache(maxsize=128)
-    def get_color_and_style(self, scope: str) -> Tuple[Optional[RgbTuple], Optional[str]]:
+    def get_color_and_style(self, scope: str) -> tuple[RgbTuple | None, str | None]:
         """Get a color from the schema, traverse all to aggregate color and style.
 
         :param scope: The scope, aka format
@@ -87,7 +84,7 @@ class ColorSchema:
 class Colorize:
     """Functionality for coloring."""
 
-    def __init__(self, grammar_dir: str, theme_path: str):
+    def __init__(self, grammar_dir: Traversable, theme_path: Traversable):
         """Initialize the colorizer.
 
         :param grammar_dir: The directory in which the grammars reside
@@ -95,13 +92,13 @@ class Colorize:
         """
         self._logger = logging.getLogger(__name__)
         self._schema: ColorSchema
-        self._grammars = Grammars(grammar_dir)
+        self._grammars = Grammars(str(grammar_dir))
         self._theme_path = theme_path
         self._load()
 
     def _load(self):
         """Load the color scheme from the file system."""
-        with open(os.path.join(self._theme_path), encoding="utf-8") as fh:
+        with self._theme_path.open(mode="r", encoding="utf-8") as fh:
             self._schema = ColorSchema(json.load(fh))
 
     @staticmethod
@@ -116,7 +113,7 @@ class Colorize:
         return CursesLines(lines)
 
     @functools.lru_cache(maxsize=100)
-    def render(self, doc: str, scope: str) -> List[List[SimpleLinePart]]:
+    def render(self, doc: str, scope: str) -> list[list[SimpleLinePart]]:
         """Render text lines into lines of columns and colors.
 
         :param doc: The string to split, tokenize and color
@@ -166,7 +163,7 @@ class Colorize:
         return res
 
 
-def scope_to_list(scope: Union[str, List]) -> List:
+def scope_to_list(scope: str | list) -> list:
     """Convert a token scope to a list if necessary.
 
     A scope in a theme should always be a string or list,
@@ -256,9 +253,9 @@ def rgb_to_ansi(red: int, green: int, blue: int, colors: int) -> int:
 
 
 def columns_and_colors(
-    lines: List[Tuple[Regions, str]],
+    lines: list[tuple[Regions, str]],
     schema: ColorSchema,
-) -> List[List[SimpleLinePart]]:
+) -> list[list[SimpleLinePart]]:
     # pylint: disable=too-many-branches
     """Convert to colors and columns.
 
@@ -266,7 +263,7 @@ def columns_and_colors(
     :param schema: An instance of the ColorSchema
     :returns: Lines of text, each broken into sections
     """
-    results: List[List[SimpleLinePart]] = []
+    results: list[list[SimpleLinePart]] = []
 
     for line in lines:
         # Break the into 1 character parts, temporarily set the column to 0
@@ -377,7 +374,7 @@ def ansi_to_curses(line: str) -> CursesLine:
     return CursesLine(tuple(printable))
 
 
-def strip_markdown(lines: List[List[SimpleLinePart]]) -> List[List[SimpleLinePart]]:
+def strip_markdown(lines: list[list[SimpleLinePart]]) -> list[list[SimpleLinePart]]:
     """Strip some markdown from the regions.
 
     This is not a complete removal of markdown, but it removes some of the

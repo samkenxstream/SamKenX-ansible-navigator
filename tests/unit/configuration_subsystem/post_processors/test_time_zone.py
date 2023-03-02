@@ -1,9 +1,8 @@
 """Tests for the time zone post processor."""
+from __future__ import annotations
+
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict
-from typing import Optional
-from typing import Union
 
 import pytest
 
@@ -13,16 +12,19 @@ from ansible_navigator.configuration_subsystem.configurator import Configurator
 from ansible_navigator.configuration_subsystem.navigator_post_processor import (
     NavigatorPostProcessor,
 )
+from tests.defaults import id_func
+from ....defaults import BaseScenario
 
 
 @dataclass
-class Scenario:
+class Scenario(BaseScenario):
     """Data structure for the time zone post processor tests."""
 
-    current: Union[bool, str, Dict]
+    name: str
+    current: bool | str | dict
     source: C
     exit_message_substr: str = ""
-    expected: Optional[str] = None
+    expected: str | None = None
     index: int = 0
 
     def __post_init__(self):
@@ -40,6 +42,7 @@ class Scenario:
 
 test_data = (
     Scenario(
+        name="0",
         current="foo",
         exit_message_substr=(
             "The specified time zone 'foo', set by environment variable, could not be found."
@@ -47,14 +50,17 @@ test_data = (
         source=C.ENVIRONMENT_VARIABLE,
     ),
     Scenario(
+        name="1",
         current="Japan",
         source=C.ENVIRONMENT_VARIABLE,
     ),
     Scenario(
+        name="2",
         current="local",
         source=C.ENVIRONMENT_VARIABLE,
     ),
     Scenario(
+        name="3",
         current={},
         exit_message_substr=(
             "The specified time zone '{}', set by settings file,"
@@ -63,6 +69,7 @@ test_data = (
         source=C.USER_CFG,
     ),
     Scenario(
+        name="4",
         current=True,
         exit_message_substr=(
             "The specified time zone 'True', set by settings file,"
@@ -71,6 +78,7 @@ test_data = (
         source=C.USER_CFG,
     ),
     Scenario(
+        name="5",
         current="foo",
         source=C.USER_CFG,
         exit_message_substr=(
@@ -78,14 +86,17 @@ test_data = (
         ),
     ),
     Scenario(
+        name="6",
         current="Japan",
         source=C.USER_CFG,
     ),
     Scenario(
+        name="7",
         current="local",
         source=C.USER_CFG,
     ),
     Scenario(
+        name="8",
         current="foo",
         exit_message_substr=(
             "The specified time zone 'foo', set by command line, could not be found."
@@ -93,17 +104,19 @@ test_data = (
         source=C.USER_CLI,
     ),
     Scenario(
+        name="9",
         current="Japan",
         source=C.USER_CLI,
     ),
     Scenario(
+        name="10",
         current="local",
         source=C.USER_CLI,
     ),
 )
 
 
-@pytest.mark.parametrize(argnames="data", argvalues=test_data, ids=str)
+@pytest.mark.parametrize(argnames="data", argvalues=test_data, ids=id_func)
 def test_pp_direct(data: Scenario):
     """Test the time zone post processor.
 
@@ -129,7 +142,7 @@ def test_pp_direct(data: Scenario):
 env_var_test_data = [s for s in test_data if s.source is C.ENVIRONMENT_VARIABLE]
 
 
-@pytest.mark.parametrize(argnames="data", argvalues=env_var_test_data, ids=str)
+@pytest.mark.parametrize(argnames="data", argvalues=env_var_test_data, ids=id_func)
 def test_env_var(monkeypatch: pytest.MonkeyPatch, data: Scenario):
     """Test the time zone post processor using the environment variable.
 

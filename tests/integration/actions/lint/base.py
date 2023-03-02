@@ -1,9 +1,8 @@
 """Base class for lint interactive tests."""
+from __future__ import annotations
+
 import difflib
 import os
-
-from typing import List
-from typing import Union
 
 import pytest
 
@@ -13,6 +12,7 @@ from ..._common import update_fixtures
 from ..._interactions import SearchFor
 from ..._interactions import UiTestStep
 from ..._tmux_session import TmuxSession
+from ..._tmux_session import TmuxSessionKwargs
 
 
 LINT_FIXTURES = os.path.join(
@@ -36,8 +36,8 @@ class BaseClass:
         :param request: Pytest request object
         :yields: TmuxSession object
         """
-        params = {
-            "unique_test_id": request.node.nodeid,
+        params: TmuxSessionKwargs = {
+            "request": request,
         }
         with TmuxSession(**params) as tmux_session:
             yield tmux_session
@@ -49,7 +49,7 @@ class BaseClass:
         :param tmux_session: TmuxSession fixture
         :param step: UiTestStep object
         """
-        search_within_response: Union[str, List[str]]
+        search_within_response: str | list[str]
         if step.search_within_response is SearchFor.HELP:
             search_within_response = ":help help"
         elif step.search_within_response is SearchFor.PROMPT:

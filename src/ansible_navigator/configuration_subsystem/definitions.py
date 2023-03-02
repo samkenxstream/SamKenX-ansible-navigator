@@ -1,4 +1,6 @@
 """Configuration definitions."""
+from __future__ import annotations
+
 import copy
 import re
 
@@ -13,11 +15,10 @@ from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import NewType
-from typing import Optional
-from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+from ..utils.functions import abs_user_path
 from ..utils.functions import oxfordcomma
 
 
@@ -53,7 +54,8 @@ class Constants(Enum):
         " that it will only be used if the subcommand is the same"
     )
     SEARCH_PATH = "Search path"
-    SENTINEL = "Indicates a nonvalue"
+    SENTINEL = "Indicates a non value"
+    TEST = "Indicates a value set from a test"
     USER_CFG = "Settings file"
     USER_CLI = "Command line"
 
@@ -72,13 +74,13 @@ class Constants(Enum):
 class CliParameters:
     """An object to hold the CLI parameters."""
 
-    action: Optional[str] = None
-    const: Optional[Union[bool, str]] = None
-    long_override: Optional[str] = None
-    nargs: Optional[str] = None
+    action: str | None = None
+    const: bool | str | None = None
+    long_override: str | None = None
+    nargs: str | None = None
     positional: bool = False
-    short: Optional[str] = None
-    metavar: Optional[str] = None
+    short: str | None = None
+    metavar: str | None = None
 
     def long(self, name_dashed: str) -> str:
         """Provide a cli long parameter.
@@ -99,7 +101,7 @@ class SettingsEntryValue:
     #: The current, effective value for the entry
     current: Any = Constants.NOT_SET
     #: Provide a specific default value to be used in the schema
-    schema_default: Union[str, Constants] = Constants.NOT_SET
+    schema_default: str | Constants = Constants.NOT_SET
     #: Indicates where the current value came from
     source: Constants = Constants.NOT_SET
 
@@ -150,19 +152,19 @@ class SettingsEntry:
     #: Indicates if this can be changed after initialization
     change_after_initial: bool = True
     #: The possible values for this entry
-    choices: Iterable[Union[bool, str]] = field(default_factory=list)
+    choices: Iterable[bool | str] = field(default_factory=list)
     #: Argparse specific params
-    cli_parameters: Optional[CliParameters] = None
+    cli_parameters: CliParameters | None = None
     #: Post process in normal (alphabetical) order or wait until after first pass
     delay_post_process: bool = False
     #: Override the default, generated environment variable
-    environment_variable_override: Optional[str] = None
+    environment_variable_override: str | None = None
     #: Over the default settings file path, dot delimited representation in tree
     environment_variable_split_char: str = ","
     #: The character used to split an environment variable value into a list
-    settings_file_path_override: Optional[str] = None
+    settings_file_path_override: str | None = None
     #: Subcommand this should this be used for
-    subcommands: Union[List[str], Constants] = Constants.ALL
+    subcommands: list[str] | Constants = Constants.ALL
     #: Does this hold the name of the active subcommand
     subcommand_value: bool = False
 
@@ -242,7 +244,7 @@ class SubCommand:
     name: str
     description: str
     version_added: str
-    epilog: Optional[str] = None
+    epilog: str | None = None
 
     def __post_init__(self):
         """Perform post initialization actions."""
@@ -254,14 +256,14 @@ class ApplicationConfiguration:
     # pylint: disable=too-many-instance-attributes
     """The main object for storing an application config."""
 
-    application_version: Union[Constants, str]
-    entries: List[SettingsEntry]
-    internals: "Internals"
-    post_processor: "NavigatorPostProcessor"
-    subcommands: List[SubCommand]
+    application_version: Constants | str
+    entries: list[SettingsEntry]
+    internals: Internals
+    post_processor: NavigatorPostProcessor
+    subcommands: list[SubCommand]
 
     application_name: str = ""
-    original_command: List[str] = field(default_factory=list)
+    original_command: list[str] = field(default_factory=list)
 
     initial: Any = None
 
@@ -319,6 +321,15 @@ class VolumeMountOption(Enum):
     keep in mind that we support both runtimes.
     """
 
+    # Overlay
+    OVERLAY = "O"
+
+    # Read Only
+    ro = "ro"  # pylint: disable=invalid-name
+
+    # Read Write
+    rw = "rw"  # pylint: disable=invalid-name
+
     # Relabel as private
     Z = "Z"
 
@@ -347,7 +358,7 @@ class VolumeMount:
     """The settings source for this volume mount"""
     options_string: InitVar[str]
     """Comma delimited options"""
-    options: Tuple[VolumeMountOption, ...] = ()
+    options: tuple[VolumeMountOption, ...] = ()
     """Options for the bind mount"""
 
     def __post_init__(self, options_string):
@@ -356,46 +367,57 @@ class VolumeMount:
         :raises VolumeMountError: When a viable VolumeMount cannot be created
         :param options_string: Option entries in as type string
         """
-        # pylint: disable=too-many-branches
         errors = []
-        # Validate the source
-        if isinstance(self.fs_source, str):
-            if self.fs_source == "":
-                errors.append("Source not provided.")
-            elif not Path(self.fs_source).exists():
-                errors.append(f"Source: '{self.fs_source}' does not exist.")
-        else:
-            errors.append(f"Source: '{self.fs_source}' is not a string.")
 
-        # Validate the destination
-        if isinstance(self.fs_destination, str):
-            if self.fs_destination == "":
-                errors.append("Destination not provided.")
-        else:
+        # Ensure each is a string
+        if not isinstance(self.fs_source, str):
+            errors.append(f"Source: '{self.fs_source}' is not a string.")
+        if not isinstance(self.fs_destination, str):
             errors.append(f"Destination: '{self.fs_destination}' is not a string.")
+        if not isinstance(options_string, str):
+            errors.append(f"Options: '{options_string}' is not a string.")
+
+        # Ensure source and dest are not empty
+        if self.fs_source == "":
+            errors.append("Source not provided.")
+        if self.fs_destination == "":
+            errors.append("Destination not provided.")
+
+        # Exit early for errors
+        if errors:
+            raise VolumeMountError(" ".join(errors))
+
+        # Resolve the source and destination
+        # frozen, cannot use simple assignment to initialize fields, and must use:
+        object.__setattr__(self, "fs_source", abs_user_path(self.fs_source))
+        object.__setattr__(self, "fs_destination", abs_user_path(self.fs_destination))
+
+        # Source must exist
+        if not Path(self.fs_source).exists():
+            error_msg = f"Source: '{self.fs_source}' does not exist."
+            raise VolumeMountError(error_msg)
 
         # Validate and populate _options
-        if isinstance(options_string, str):
-            if not options_string == "":
-                options = []
-                option_values = [o.value for o in VolumeMountOption]
-                for option in options_string.split(","):
-                    if option not in option_values:
-                        errors.append(
-                            f"Unrecognized option: '{option}',"
-                            f" available options include"
-                            f" {oxfordcomma(option_values, condition='and/or')}.",
-                        )
-                    else:
-                        options.append(VolumeMountOption(option))
-                unique = sorted(set(options), key=options.index)
-                # frozen, cannot use simple assignment to initialize fields, and must use:
-                object.__setattr__(self, "options", tuple(unique))
-        else:
-            errors.append(f"Options: '{options_string}' is not a string.")
+        if options_string == "":
+            return
+
+        options = []
+        option_values = [o.value for o in VolumeMountOption]
+        for option in options_string.split(","):
+            if option not in option_values:
+                errors.append(
+                    f"Unrecognized option: '{option}',"
+                    f" available options include"
+                    f" {oxfordcomma(option_values, condition='and/or')}.",
+                )
+            else:
+                options.append(VolumeMountOption(option))
 
         if errors:
             raise VolumeMountError(" ".join(errors))
+
+        unique = sorted(set(options), key=options.index)
+        object.__setattr__(self, "options", tuple(unique))
 
     def to_string(self) -> str:
         """Render the volume mount in a way that (docker|podman) understands.
@@ -427,6 +449,16 @@ class ModeChangeRequest:
     """The entry making the request"""
     mode: Mode
     """The desired mode"""
+
+
+@dataclass
+class PaeChangeRequest:
+    """Data structure to hold playbook artifact change request by a settings entry."""
+
+    entry: str
+    """The entry making the request"""
+    playbook_artifact_enable: bool
+    """The desired value for playbook_artifact_enable"""
 
 
 # and some common ones

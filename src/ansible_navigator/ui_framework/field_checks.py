@@ -1,13 +1,12 @@
 """Individual field check, the form field checks and radio check."""
+from __future__ import annotations
+
 import sys
 
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
 from typing import Callable
-from typing import List
-from typing import Tuple
-from typing import Union
 
 from .form_handler_options import FormHandlerOptions
 from .sentinels import Unknown
@@ -23,14 +22,14 @@ class FieldChecks:
     prompt: str
     name: str
     current_error: str = ""
-    valid: Union[Unknown, bool] = unknown
-    options: List = field(default_factory=list)
+    valid: Unknown | bool = unknown
+    options: list = field(default_factory=list)
     max_selected: int = sys.maxsize
     min_selected: int = 1
     window_handler = FormHandlerOptions
 
     @property
-    def checked(self) -> Tuple[bool, ...]:
+    def checked(self) -> tuple[bool, ...]:
         """Conveniently return just checked fields.
 
         :returns: Name of every checked field
@@ -65,7 +64,7 @@ class FieldChecks:
             min_selected=self.min_selected,
         )
 
-    def _validate(self, response: "FieldChecks") -> Validation:
+    def _validate(self, response: FieldChecks) -> Validation:
         validation = self.validator(choices=response.options)
         if validation.error_msg:
             self.valid = False
@@ -73,7 +72,7 @@ class FieldChecks:
             self.valid = True
         return validation
 
-    def validate(self, response: "FieldChecks") -> None:
+    def validate(self, response: FieldChecks) -> None:
         """Validate this FieldChecks instance.
 
         :param response: Instance to check and verify options are valid
@@ -84,8 +83,8 @@ class FieldChecks:
         validation = self._validate(response)
         self.current_error = validation.error_msg
 
-    def conditional_validation(self, response: "FieldChecks") -> None:
-        """Conditional validation for a Fieldchecks instance.
+    def conditional_validation(self, response: FieldChecks) -> None:
+        """Conditional validation for a field_checks instance.
 
         :param response: Instance to check and verify options are valid
         """

@@ -1,11 +1,10 @@
 """Individual check and the form field checks for radios."""
+from __future__ import annotations
 
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
 from typing import Callable
-from typing import List
-from typing import Union
 
 from .form_handler_options import FormHandlerOptions
 from .sentinels import Unknown
@@ -21,8 +20,8 @@ class FieldRadio:
     prompt: str
     name: str
     current_error: str = ""
-    valid: Union[Unknown, bool] = unknown
-    options: List = field(default_factory=list)
+    valid: Unknown | bool = unknown
+    options: list = field(default_factory=list)
     window_handler = FormHandlerOptions
 
     @property
@@ -57,7 +56,7 @@ class FieldRadio:
         """
         return partial(FieldValidators.some_of_or_none, max_selected=1, min_selected=1)
 
-    def _validate(self, response: "FieldRadio") -> Validation:
+    def _validate(self, response: FieldRadio) -> Validation:
         validation = self.validator(choices=response.options)
         if validation.error_msg:
             self.valid = False
@@ -65,7 +64,7 @@ class FieldRadio:
             self.valid = True
         return validation
 
-    def validate(self, response: "FieldRadio") -> None:
+    def validate(self, response: FieldRadio) -> None:
         """Validate this FieldRadio instance.
 
         :param response: Instance to check and verify options are valid
@@ -73,7 +72,7 @@ class FieldRadio:
         validation = self._validate(response)
         self.current_error = validation.error_msg
 
-    def conditional_validation(self, response: "FieldRadio") -> None:
+    def conditional_validation(self, response: FieldRadio) -> None:
         """Conditional validation for a FieldRadio instance.
 
         :param response: Instance to check and verify options are valid

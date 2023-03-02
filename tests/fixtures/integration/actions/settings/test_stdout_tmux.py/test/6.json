@@ -34,6 +34,7 @@
         "ansible-navigator.color.osc4: Defaults",
         "ansible-navigator.editor.command: Defaults",
         "ansible-navigator.editor.console: Defaults",
+        "ansible-navigator.enable-prompts: Defaults",
         "ansible-navigator.exec.command: Defaults",
         "ansible-navigator.exec.shell: Defaults",
         "ansible-navigator.execution-environment.container-engine: Automatically determined",
@@ -45,6 +46,7 @@
         "ansible-navigator.execution-environment.pull.arguments: Not set",
         "ansible-navigator.execution-environment.pull.policy: Environment variable",
         "ansible-navigator.execution-environment.volume-mounts: Not set",
+        "ansible-navigator.format: Defaults",
         "ansible-navigator.images.details: Defaults",
         "ansible-navigator.inventory-columns: Not set",
         "ansible-navigator.logging.append: Defaults",
@@ -61,6 +63,6 @@
         "ansible-navigator.time-zone: Defaults",
         "settings_file_path: None",
         "settings_file_source: None",
-        "(venv) bash-5.1$"
+        "(venv) bash$"
     ]
 }

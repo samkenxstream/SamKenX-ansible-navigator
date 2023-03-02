@@ -3,13 +3,11 @@
 # fmt: off
 """Sphinx extension for generating the rules table document."""
 
+from __future__ import annotations
+
 from copy import copy
 from pathlib import Path
 from re import match
-from typing import Dict
-from typing import List
-from typing import Tuple
-from typing import Union
 
 from sphinx.application import Sphinx
 from sphinx.util import logging
@@ -24,11 +22,11 @@ from docutils import statemachine  # isort: skip
 # isort: split
 
 
-from ansible_navigator._version import version as __version__
 from ansible_navigator.configuration_subsystem import Constants as C
 from ansible_navigator.configuration_subsystem import NavigatorConfiguration
 from ansible_navigator.configuration_subsystem.definitions import SettingsEntry
 from ansible_navigator.utils.functions import oxfordcomma
+from ansible_navigator.version import __version__
 
 
 APP = "ansible-navigator"
@@ -69,7 +67,7 @@ logger = logging.getLogger(__name__)
 def _nodes_from_rst(
     state: statemachine.State,
     rst_source: str,
-) -> List[nodes.Node]:
+) -> list[nodes.Node]:
     """Turn an RST string into a list of nodes.
 
     These nodes can be used in the document.
@@ -92,7 +90,7 @@ def _nodes_from_rst(
     return node.children
 
 
-def _rst_generate_row(row: Tuple) -> List:
+def _rst_generate_row(row: tuple) -> list:
     """Generate a row for an RST list table.
 
     :param row: A tuple containing the text for the row
@@ -113,7 +111,7 @@ def _rst_generate_row(row: Tuple) -> List:
     return data
 
 
-def _params_generate_tables() -> List:
+def _params_generate_tables() -> list:
     """Generate a table for each subcommand's settings parameters.
 
     :returns: A list of tables, one each for each subcommand
@@ -156,7 +154,7 @@ def _params_generate_tables() -> List:
     return tables
 
 
-def _params_row_for_entry(entry: SettingsEntry) -> Tuple:
+def _params_row_for_entry(entry: SettingsEntry) -> tuple:
     # pylint: disable=too-many-branches
     """Create a row entry for one settings parameter.
 
@@ -208,7 +206,7 @@ def _params_row_for_entry(entry: SettingsEntry) -> Tuple:
     return row
 
 
-def _subcommands_generate_tables() -> List:
+def _subcommands_generate_tables() -> list:
     """Generate the subcommand table.
 
     :returns: A list of available subcommands
@@ -238,7 +236,7 @@ class AnsibleNavigatorSubcommandsTableDirective(SphinxDirective):
 
     has_content = False
 
-    def run(self) -> List[nodes.Node]:
+    def run(self) -> list[nodes.Node]:
         """Generate a node tree in place of the directive.
 
         :returns: A list of nodes generated from the RST content for the subcommands table
@@ -255,7 +253,7 @@ class AnsibleNavigatorSettingsSampleDirective(SphinxDirective):
 
     has_content = False
 
-    def run(self) -> List[nodes.Node]:
+    def run(self) -> list[nodes.Node]:
         """Generate a node tree in place of the directive.
 
         :returns: A list of nodes generated from the RST content for the settings parameters sample
@@ -283,7 +281,7 @@ class AnsibleNavigatorParametersTablesDirective(SphinxDirective):
 
     has_content = False
 
-    def run(self) -> List[nodes.Node]:
+    def run(self) -> list[nodes.Node]:
         """Generate a node tree in place of the directive.
 
         :returns: A list of nodes generated from the RST content for all settings parameter tables
@@ -294,7 +292,7 @@ class AnsibleNavigatorParametersTablesDirective(SphinxDirective):
         return _nodes_from_rst(state=self.state, rst_source=rst_tables)
 
 
-def setup(app: Sphinx) -> Dict[str, Union[bool, str]]:
+def setup(app: Sphinx) -> dict[str, bool | str]:
     """Initialize the Sphinx extension.
 
     :param app: An instance of sphinx

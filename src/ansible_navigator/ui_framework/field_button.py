@@ -1,7 +1,8 @@
 """A text input field."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Callable
-from typing import Optional
 
 from .curses_window import Window
 from .form_defs import FieldValidationStates
@@ -20,7 +21,7 @@ class FieldButton:
     color: int = 0
     window_handler = FormHandlerButton
     validator: Callable = FieldValidators.none
-    win: Optional[Window] = None
+    win: Window | None = None
 
     @property
     def full_prompt(self) -> str:

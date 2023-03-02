@@ -1,4 +1,6 @@
 """Images subcommand implementation."""
+from __future__ import annotations
+
 import curses
 import json
 import shlex
@@ -6,16 +8,12 @@ import shlex
 from copy import deepcopy
 from functools import partial
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from ..action_base import ActionBase
 from ..action_defs import RunStdoutReturn
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
 from ..configuration_subsystem import Constants
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..content_defs import ContentFormat
 from ..image_manager import inspect_all
 from ..runner import Command
@@ -31,7 +29,7 @@ from . import _actions as actions
 from . import run_action
 
 
-def filter_content_keys(obj: Dict[Any, Any]) -> Dict[Any, Any]:
+def filter_content_keys(obj: dict[Any, Any]) -> dict[Any, Any]:
     """Filter out some keys when showing image content.
 
     :param obj: The object from which keys should be removed
@@ -61,7 +59,7 @@ class Action(ActionBase):
         :param args: The current settings for the application
         """
         super().__init__(args=args, logger_name=__name__, name="images")
-        self._image_list: List = []
+        self._image_list: list = []
         self._images = Step(
             name="images",
             step_type="menu",
@@ -70,7 +68,7 @@ class Action(ActionBase):
             select_func=self._build_image_menu,
         )
 
-    def color_menu(self, colno: int, colname: str, entry: Dict[str, Any]) -> Tuple[int, int]:
+    def color_menu(self, colno: int, colname: str, entry: dict[str, Any]) -> tuple[int, int]:
         # pylint: disable=unused-argument
         """Provide a color for a images menu entry in one column.
 
@@ -93,7 +91,7 @@ class Action(ActionBase):
                 return 12, 0
         return 2, 0
 
-    def generate_content_heading(self, obj: Dict, screen_w: int, name: str = "") -> CursesLines:
+    def generate_content_heading(self, obj: dict, screen_w: int, name: str = "") -> CursesLines:
         """Create a heading for image content.
 
         :param obj: The content going to be shown
@@ -151,7 +149,6 @@ class Action(ActionBase):
         print_to_stdout(
             content=filtered,
             content_format=ContentFormat.YAML,
-            share_directory=self._args.internals.share_directory,
             use_color=self._args.display_color,
         )
         return RunStdoutReturn(message="", return_code=0)
@@ -186,12 +183,11 @@ class Action(ActionBase):
         print_to_stdout(
             content=details,
             content_format=ContentFormat.YAML,
-            share_directory=self._args.internals.share_directory,
             use_color=self._args.display_color,
         )
         return RunStdoutReturn(message="", return_code=0)
 
-    def run(self, interaction: Interaction, app: AppPublic) -> Optional[Interaction]:
+    def run(self, interaction: Interaction, app: AppPublic) -> Interaction | None:
         """Execute the ``images`` request for mode interactive.
 
         :param interaction: The interaction from the user
@@ -443,12 +439,30 @@ class Action(ActionBase):
                 image["__name"] += " (primary)"
                 image["__name_tag"] += " (primary)"
 
+            details = image["inspect"]["details"]
+
             try:
-                image["execution_environment"] = (
-                    image["inspect"]["details"]["config"]["working_dir"] == "/runner"
-                )
+                legacy_check = details["config"]["working_dir"] == "/runner"
             except KeyError:
-                image["execution_environment"] = False
+                legacy_check = False
+
+            # podman has a root label
+            try:
+                root_label_check = details["labels"]["ansible-execution-environment"] == "true"
+            except (KeyError, TypeError):
+                root_label_check = False
+
+            # docker has only a config.label
+            try:
+                config_label_check = (
+                    details["config"]["labels"]["ansible-execution-environment"] == "true"
+                )
+            except (KeyError, TypeError):
+                config_label_check = False
+
+            image["execution_environment"] = any(
+                (legacy_check, root_label_check, config_label_check)
+            )
         self._images.value = sorted(images, key=lambda i: i["name"])
 
     def _introspect_image(self) -> bool:
@@ -501,7 +515,7 @@ class Action(ActionBase):
             return False
         return True
 
-    def _parse(self, output) -> Optional[Dict]:
+    def _parse(self, output) -> dict | None:
         """Load and process the ``json`` output from the image introspection process.
 
         :param output: The output from the image introspection process
@@ -529,7 +543,7 @@ class Action(ActionBase):
             self._logger.error("%s %s", error["path"], error["error"])
         return parsed
 
-    def _run_runner(self, image_name: str) -> Tuple[str, str, int]:
+    def _run_runner(self, image_name: str) -> tuple[str, str, int]:
         """Run runner to collect image details.
 
         :param image_name: The full image name

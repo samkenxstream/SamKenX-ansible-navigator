@@ -1,16 +1,19 @@
 """Abstractions for common serialization formats."""
 
+from __future__ import annotations
+
 import json
 import logging
+import os
 import re
 import tempfile
 
 from dataclasses import is_dataclass
+from functools import partial
 from pathlib import Path
 from typing import IO
 from typing import Any
 from typing import NamedTuple
-from typing import Optional
 
 import yaml
 
@@ -27,14 +30,14 @@ logger = logging.getLogger(__name__)
 try:
     from yaml import CSafeDumper as SafeDumper
 except ImportError:
-    from yaml import SafeDumper  # type: ignore[misc] # noqa: F401
+    from yaml import SafeDumper  # type: ignore # noqa: F401
 
 try:
     from yaml import CLoader as Loader
     from yaml import CSafeLoader as SafeLoader
 except ImportError:
-    from yaml import Loader  # type: ignore[misc] # noqa: F401
-    from yaml import SafeLoader  # type: ignore[misc] # noqa: F401
+    from yaml import Loader  # type: ignore # noqa: F401
+    from yaml import SafeLoader  # type: ignore # noqa: F401
 # pylint: enable=unused-import
 
 
@@ -108,7 +111,7 @@ def serialize_write_temp_file(
     :returns: A ``Path`` to the file written to
     """
     serialization_format = content_format.value.serialization
-    suffix = content_format.value.file_extention
+    suffix = content_format.value.file_extension
 
     if serialization_format is not None:
         dumpable = _prepare_content(
@@ -297,7 +300,7 @@ class HumanDumper(SafeDumper):
         self,
         tag: str,
         value: str,
-        style: Optional[str] = None,
+        style: str | None = None,
     ) -> yaml.nodes.ScalarNode:
         """Represent all multiline strings as block scalars to improve readability for humans.
 
@@ -334,3 +337,30 @@ def _is_multiline_string(value: str):
             return True
 
     return False
+
+
+def opener(path: str, flags: int, mode: int) -> int:
+    """Open a file with the given path and flags.
+
+    :param path: The path of the file to open.
+    :param flags: The flags to use when opening the file.
+    :param mode: The mode to use when opening the file.
+    :return: The file descriptor of the opened file.
+    """
+    return os.open(path=path, flags=flags, mode=mode)
+
+
+def write_diagnostics_json(path: str, mode: int, content: object) -> None:
+    """Write a file with the given name.
+
+    :param content: The content we want to write in the file.
+    :param mode: The mode to use when writing the file.
+    :param path: The path of the file to write.
+    """
+    # Without this, the created file will have 0o777 - 0o022 (default umask) = 0o755 permissions
+    oldmask = os.umask(0)
+
+    opener_func = partial(opener, mode=mode)
+    with open(path, "w", encoding="utf-8", opener=opener_func) as f:
+        f.write(json.dumps(content, indent=4, sort_keys=True))
+    os.umask(oldmask)

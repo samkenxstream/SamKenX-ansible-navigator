@@ -1,5 +1,7 @@
 """Tests ensuring only requirements.txt are needed."""
 
+from __future__ import annotations
+
 import os
 import shutil
 import tempfile
@@ -29,7 +31,7 @@ def _get_venv():
 class NavigatorCommand(Command):
     """Data structure for a full command."""
 
-    ee_tests: Tuple[bool, bool] = (True, False)
+    ee_tests: tuple[bool, bool] = (True, False)
     find: str = ""
     set_env: str = "--senv PAGER=cat"
 
@@ -46,7 +48,7 @@ class PartialCommand:
 
     params: str
     find: str
-    ee_support: Tuple[bool, ...] = (True, False)
+    ee_support: tuple[bool, ...] = (True, False)
 
 
 PartialCommands = (
@@ -60,13 +62,13 @@ PartialCommands = (
 )
 
 
-def _generate_commands(tmp_dir: Path) -> List[NavigatorCommand]:
+def _generate_commands(tmp_dir: Path) -> list[NavigatorCommand]:
     """Produce the commands.
 
     :param tmp_dir: Path to a temporary directory
     :returns: All the commands
     """
-    commands: List[NavigatorCommand] = []
+    commands: list[NavigatorCommand] = []
     for partial_command in PartialCommands:
         for ee_value in partial_command.ee_support:
             random_name = uuid.uuid4()
@@ -106,7 +108,7 @@ class Test(unittest.TestCase):
         """Execute the smoke tests."""
         tmp_dir = self.test_dir
         commands = _generate_commands(tmp_dir)
-        command_results = CommandRunner().run_multi_proccess(commands)
+        command_results = CommandRunner().run_multi_process(commands)
         for command in command_results:
             with self.subTest():
                 print(command.command)

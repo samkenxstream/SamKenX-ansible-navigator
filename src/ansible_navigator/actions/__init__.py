@@ -12,13 +12,15 @@ Currently, the ``actions`` package is the only package supported for actions and
 is identified in the
 :class:`~ansible_navigator.configuration_subsystem.navigator_configuration.Internals`.
 """
+from __future__ import annotations
+
 from typing import Any
 from typing import Callable
 from typing import Optional
 
 from ..action_defs import RunStdoutReturn
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..ui_framework import Interaction
 from . import _actions as actions
 
@@ -38,7 +40,7 @@ run_action_stdout: Callable[
 
 run_action: Callable[
     [str, AppPublic, Interaction],
-    Optional[Interaction],
+    Interaction | None,
 ] = actions.run_interactive_factory(__package__)
 
 

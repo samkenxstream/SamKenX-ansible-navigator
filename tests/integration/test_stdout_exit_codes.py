@@ -1,16 +1,16 @@
 """Check return codes from mode ``stdout``."""
+from __future__ import annotations
+
 import os
-import subprocess
 
 from pathlib import Path
-from typing import List
 from typing import NamedTuple
-from typing import Tuple
 
 import pytest
 
 from ansible_navigator.utils.functions import shlex_join
-from ..defaults import DEFAULT_CONTAINER_IMAGE
+from tests.defaults import id_func
+from ..conftest import TCmdInTty
 from ..defaults import FIXTURES_DIR
 
 
@@ -18,11 +18,21 @@ PLAYBOOK = os.path.join(FIXTURES_DIR, "integration", "stdout_exit_codes", "site.
 
 
 @pytest.fixture(name="params")
-def fixture_params(request):
-    """generate parameters"""
+def fixture_params(
+    default_ee_image_name: str,
+    valid_container_engine: str,
+    request: pytest.FixtureRequest,
+) -> dict[str, str]:
+    """Generate parameters.
+
+    :param default_ee_image_name: The default execution environment image name
+    :param request: The pytest request object
+    :returns: The parameters
+    """
     return {
+        "container_engine": valid_container_engine,
         "execution_environment": request.param,
-        "execution_environment_image": DEFAULT_CONTAINER_IMAGE,
+        "execution_environment_image": default_ee_image_name,
     }
 
 
@@ -42,7 +52,7 @@ class StdoutTest(NamedTuple):
     #: The name of the action
     action_name: str
     #: Parameters for the action
-    action_params: Tuple[Tuple, ...]
+    action_params: tuple[tuple, ...]
     #: Text to search for
     present: str
     #: Expected return code
@@ -73,7 +83,8 @@ fixture_test_data = (
     StdoutTest(
         action_name="doc",
         action_params=(("cmdline", ["--json"]),),
-        present="Incorrect options passed",
+        # cspell:disable-next-line
+        present="ncorrect options passed",
         return_code=5,
     ),
     StdoutTest(
@@ -124,9 +135,10 @@ def test(action_run_stdout, params, test_data):
 class StdoutCliTest(NamedTuple):
     """Definition of a stdout cli test."""
 
+    name: str
     comment: str
     """Description of the test"""
-    params: List[str]
+    params: list[str]
     """Parameters for the subcommand"""
     return_code: int
     """Expected return code"""
@@ -148,7 +160,7 @@ class StdoutCliTest(NamedTuple):
         return self.comment
 
     @property
-    def command(self) -> List[str]:
+    def command(self) -> list[str]:
         """Provide the constructed command"""
         return ["ansible-navigator", self.subcommand] + self.params + ["--mode", self.mode]
 
@@ -156,6 +168,7 @@ class StdoutCliTest(NamedTuple):
 # Intentionally not using parametrize so the behavior can be documented
 StdoutCliTests = (
     StdoutCliTest(
+        name="0",
         comment="run pass",
         subcommand="run",
         params=[PLAYBOOK],
@@ -166,6 +179,7 @@ StdoutCliTests = (
         navigator_stderr="",
     ),
     StdoutCliTest(
+        name="1",
         comment="run fail",
         subcommand="run",
         params=["no_such_playbook.yaml"],
@@ -178,51 +192,40 @@ StdoutCliTests = (
 )
 
 
+@pytest.mark.usefixtures("use_venv")
 @pytest.mark.parametrize(argnames="pae", argvalues=(True, False), ids=("pae_true", "pae_false"))
 @pytest.mark.parametrize(argnames="exec_env", argvalues=(True, False), ids=("ee_true", "ee_false"))
-@pytest.mark.parametrize(argnames="data", argvalues=StdoutCliTests, ids=str)
-def test_run_through_cli(tmp_path: Path, data: StdoutCliTest, exec_env: bool, pae: bool) -> None:
+@pytest.mark.parametrize(argnames="data", argvalues=StdoutCliTests, ids=id_func)
+def test_run_through_cli(
+    tmp_path: Path,
+    data: StdoutCliTest,
+    exec_env: bool,
+    pae: bool,
+    cmd_in_tty: TCmdInTty,
+) -> None:
     """Test for a return code from run through a shell.
 
+    :param tmp_path: A tmp location
     :param data: The test data
+    :param exec_env: Enable/disable execution environment support
+    :param pae: Enable/disable playbook artifact creation
+    :param cmd_in_tty: The tty command runner
     :raises AssertionError: When no virtual environment found
     """
-    venv_path = os.environ.get("VIRTUAL_ENV")
-    if venv_path is None:
-        raise AssertionError(
-            "VIRTUAL_ENV environment variable was not set but tox should have set it.",
-        )
-    venv = Path(venv_path, "bin", "activate")
     log_file = str(Path(tmp_path, "log.txt"))
     artifact_file = str(Path(tmp_path, "artifact.json"))
 
-    command = data.command + [
-        "--lf",
-        log_file,
-        "--pae",
-        str(pae),
-        "--pas",
-        artifact_file,
-        "--ee",
-        str(exec_env),
-    ]
-    bash_wrapped = f"/bin/bash -c 'source {venv!s} && {shlex_join(command)}'"
-    proc_out = subprocess.run(
-        bash_wrapped,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-        shell=True,
-    )
+    common = ["--lf", log_file, "--pae", str(pae), "--pas", artifact_file, "--ee", str(exec_env)]
+    command = shlex_join(data.command + common)
+    stdout, stderr, exit_code = cmd_in_tty(command)
 
-    assert data.ansible_stdout in proc_out.stdout
+    assert data.ansible_stdout in stdout
     if not exec_env and not pae:
         # Without an EE and PAE, ansible writes to ``stderr``
-        assert data.ansible_stderr in proc_out.stderr
+        assert data.ansible_stderr in stderr
     else:
         # Everything is routed through ``stdout``
-        assert data.ansible_stderr in proc_out.stdout
-    assert data.navigator_stdout in proc_out.stdout
-    assert data.navigator_stderr in proc_out.stderr
-    assert data.return_code == proc_out.returncode
+        assert data.ansible_stderr in stdout
+    assert data.navigator_stdout in stdout
+    assert data.navigator_stderr in stderr
+    assert data.return_code == exit_code

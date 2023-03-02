@@ -1,13 +1,15 @@
 """Test doc using subprocess."""
-import subprocess
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
 from ansible_navigator.utils.functions import shlex_join
+from tests.defaults import BaseScenario
+from tests.defaults import id_func
+from ....conftest import TCmdInTty
 
 
 BUILTINS = (
@@ -18,14 +20,14 @@ BUILTINS = (
 
 
 @dataclass(frozen=True)
-class StdoutCliTest:
+class StdoutCliTest(BaseScenario):
     """Definition of a stdout cli test."""
 
     comment: str
     """Description of the test"""
-    params: Tuple[str, ...]
+    params: tuple[str, ...]
     """Parameters for the subcommand"""
-    expected: Tuple[str, ...] = BUILTINS
+    expected: tuple[str, ...] = BUILTINS
     """Expected output"""
     subcommand: str = "doc"
 
@@ -37,7 +39,7 @@ class StdoutCliTest:
         return self.comment
 
     @property
-    def command(self) -> Tuple[str, ...]:
+    def command(self) -> tuple[str, ...]:
         """Provide the constructed command.
 
         :returns: The constructed command
@@ -95,13 +97,14 @@ StdoutCliTests = (
 
 
 @pytest.mark.usefixtures("use_venv")
-@pytest.mark.parametrize(argnames="data", argvalues=StdoutCliTests, ids=str)
+@pytest.mark.parametrize(argnames="data", argvalues=StdoutCliTests, ids=id_func)
 @pytest.mark.parametrize(argnames="exec_env", argvalues=(True, False), ids=("ee_true", "ee_false"))
 def test(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     data: StdoutCliTest,
     exec_env: bool,
+    cmd_in_tty: TCmdInTty,
 ) -> None:
     """Test doc using subcommand.
 
@@ -109,6 +112,7 @@ def test(
     :param tmp_path: The temporary path to use
     :param data: The test data
     :param exec_env: Whether to use the exec environment
+    :param cmd_in_tty: The tty command runner
     :raises AssertionError: When test fails
     """
     log_file = str(tmp_path / "log.txt")
@@ -117,12 +121,6 @@ def test(
     command = shlex_join(
         data.command + ("--lf", log_file, "--ee", str(exec_env), "--set-env", "PAGER=cat"),
     )
-    proc_out = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-        shell=True,
-    )
-    assert all((d in proc_out.stdout for d in data.expected))
+    stdout, _stderr, _exit_code = cmd_in_tty(cmd=command)
+
+    assert all(d in stdout for d in data.expected)

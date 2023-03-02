@@ -1,11 +1,11 @@
 """Type for curses window."""
+from __future__ import annotations
 
 import curses
 import json
 import logging
 
 from typing import TYPE_CHECKING
-from typing import Optional
 
 from .colorize import hex_to_rgb_curses
 from .curses_defs import CursesLine
@@ -84,7 +84,7 @@ class CursesWindow:
             curses.beep()
             self._screen.refresh()
 
-    def _color_pair_or_none(self, color: int) -> Optional[int]:
+    def _color_pair_or_none(self, color: int) -> int | None:
         """Return 0 if colors are disabled, otherwise returns the curses color pair.
 
         :param color: Int for specific curses color
@@ -110,7 +110,7 @@ class CursesWindow:
         window: Window,
         lineno: int,
         line: CursesLine,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
     ) -> None:
         """Add a line to a window.
 
@@ -195,7 +195,7 @@ class CursesWindow:
         self._logger.debug("term_osc4_support: %s", self._term_osc4_support)
 
         if self._term_osc4_support:
-            with open(self._ui_config.terminal_colors_path, encoding="utf-8") as fh:
+            with self._ui_config.terminal_colors_path.open(mode="r", encoding="utf-8") as fh:
                 colors = json.load(fh)
 
             for color_name, color_hex in colors.items():

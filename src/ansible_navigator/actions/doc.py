@@ -1,5 +1,7 @@
 """Doc subcommand implementation."""
 
+from __future__ import annotations
+
 import curses
 import json
 import os
@@ -7,16 +9,12 @@ import shlex
 import shutil
 
 from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from ..action_base import ActionBase
 from ..action_defs import RunStdoutReturn
 from ..app_public import AppPublic
-from ..configuration_subsystem import ApplicationConfiguration
 from ..configuration_subsystem import Constants as C
+from ..configuration_subsystem.definitions import ApplicationConfiguration
 from ..runner import AnsibleDoc
 from ..runner import Command
 from ..ui_framework import CursesLine
@@ -39,11 +37,11 @@ class Action(ActionBase):
         """
         super().__init__(args=args, logger_name=__name__, name="doc")
 
-        self._plugin_name: Optional[str] = None
-        self._plugin_type: Optional[str] = None
-        self._runner: Union[Command, AnsibleDoc]
+        self._plugin_name: str | None = None
+        self._plugin_type: str | None = None
+        self._runner: Command | AnsibleDoc
 
-    def generate_content_heading(self, _obj: Dict, screen_w: int) -> CursesLines:
+    def generate_content_heading(self, _obj: dict, screen_w: int) -> CursesLines:
         """Create a heading for doc content.
 
         :param _obj: The content going to be shown
@@ -63,7 +61,7 @@ class Action(ActionBase):
 
         return CursesLines((CursesLine((line_part,)),))
 
-    def run(self, interaction: Interaction, app: AppPublic) -> Optional[Interaction]:
+    def run(self, interaction: Interaction, app: AppPublic) -> Interaction | None:
         """Execute the ``doc`` request for mode interactive.
 
         :param interaction: The interaction from the user
@@ -134,7 +132,7 @@ class Action(ActionBase):
         _out, error, return_code = response
         return RunStdoutReturn(message=error, return_code=return_code)
 
-    def _run_runner(self) -> Optional[Union[dict, Tuple[str, str, int]]]:
+    def _run_runner(self) -> dict | tuple[str, str, int] | None:
         # pylint: disable=too-many-branches
         # pylint: disable=no-else-return
         """Use the runner subsystem to retrieve the configuration.
@@ -231,9 +229,9 @@ class Action(ActionBase):
 
     def _extract_plugin_doc(
         self,
-        out: Union[Dict[Any, Any], str],
-        err: Union[Dict[Any, Any], str],
-    ) -> Optional[Dict[Any, Any]]:
+        out: dict[Any, Any] | str,
+        err: dict[Any, Any] | str,
+    ) -> dict[Any, Any] | None:
         """Extract the plugin's documentation from the runner output.
 
         :param out: The output from runner

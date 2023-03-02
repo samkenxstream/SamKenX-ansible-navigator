@@ -1,5 +1,7 @@
 # cspell:ignore KEY_NPAGE, KEY_PPAGE
 """The main UI renderer."""
+from __future__ import annotations
+
 import curses
 import logging
 import re
@@ -11,16 +13,11 @@ from math import ceil
 from math import floor
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
 from typing import Match
 from typing import NamedTuple
-from typing import Optional
 from typing import Pattern
 from typing import Protocol
 from typing import Sequence
-from typing import Tuple
-from typing import Union
 
 from ..content_defs import ContentFormat
 from ..content_defs import ContentType
@@ -56,23 +53,23 @@ END_KEYS = {":help": "help"}
 
 
 class Action(NamedTuple):
-    """the user's input"""
+    """the user's input."""
 
-    value: Union[str, int]
+    value: str | int
     match: Match
 
 
 class Content(NamedTuple):
-    """what's on the screen, when showing content"""
+    """what's on the screen, when showing content."""
 
     showing: Any
 
 
 class Menu(NamedTuple):
-    """details about the currently showing menu"""
+    """details about the currently showing menu."""
 
     current: ContentTypeSequence
-    columns: List[str]
+    columns: list[str]
 
 
 class ContentFormatCallable(Protocol):
@@ -80,10 +77,14 @@ class ContentFormatCallable(Protocol):
 
     def __call__(
         self,
-        value: Optional[ContentFormat] = None,
+        value: ContentFormat | None = None,
         default: bool = False,
     ) -> ContentFormat:
-        """Refer to and keep in sync with UserInterface.content_format"""
+        """Refer to and keep in sync with UserInterface.content_format.
+
+        :param value: The value refers to the UI content format
+        :param default: The default UI content format
+        """
 
 
 class ShowCallable(Protocol):
@@ -93,19 +94,29 @@ class ShowCallable(Protocol):
     def __call__(
         self,
         obj: ContentType,
-        content_format: Optional[ContentFormat] = None,
-        index: Optional[int] = None,
-        columns: Optional[List] = None,
+        content_format: ContentFormat | None = None,
+        index: int | None = None,
+        columns: list | None = None,
         await_input: bool = True,
         filter_content_keys: Callable = lambda x: x,
         color_menu_item: Callable = lambda *args, **kwargs: (0, 0),
         content_heading: Callable = lambda *args, **kwargs: None,
-    ) -> "Interaction":
-        """Refer to and keep in sync with UserInterface.show"""
+    ) -> Interaction:
+        """Refer to and keep in sync with UserInterface.show.
+
+        :param obj: The inbound object
+        :param content_format: Refers to the content format
+        :param index: The indices of objects
+        :param columns: Refers to the menu column
+        :param await_input: Should we wait for user input?
+        :param filter_content_keys: The filter content keys
+        :param color_menu_item: To color the menu item
+        :param content_heading: Refers to the content heading
+        """
 
 
 class Ui(NamedTuple):
-    """select functions that can be called from an action"""
+    """select functions that can be called from an action."""
 
     clear: Callable
     menu_filter: Callable
@@ -117,20 +128,19 @@ class Ui(NamedTuple):
 
 
 class Interaction(NamedTuple):
-    """wrapper for what is sent back to the calling app"""
+    """wrapper for what is sent back to the calling app."""
 
     name: str
     action: Action
     ui: Ui
-    content: Optional[Content] = None
-    menu: Optional[Menu] = None
+    content: Content | None = None
+    menu: Menu | None = None
 
 
 class UserInterface(CursesWindow):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-
-    """The main UI class"""
+    """The main UI class."""
 
     def __init__(
         self,
@@ -146,32 +156,32 @@ class UserInterface(CursesWindow):
         :param screen_min_height: The minimum screen height
         :param kegexes: A callable producing a list of action regular expressions to match against
         :param refresh: The screen refresh time is ms
-        :param ui_config: the current UI configuration
+        :param ui_config: The current UI configuration
         :param progress_bar_width: The width of the progress bar
         :param status_width: The width of the status indicator
         """
         super().__init__(ui_config=ui_config)
-        self._color_menu_item: Callable[[int, str, Dict[str, Any]], Tuple[int, int]]
+        self._color_menu_item: Callable[[int, str, dict[str, Any]], tuple[int, int]]
         self._colorizer = Colorize(
             grammar_dir=self._ui_config.grammar_dir,
             theme_path=self._ui_config.theme_path,
         )
-        self._content_heading: Callable[[Any, int], Optional[CursesLines]]
+        self._content_heading: Callable[[Any, int], CursesLines | None]
         self._default_colors = None
         self._default_pairs = None
         self._default_content_format = ContentFormat.YAML
-        self._filter_content_keys: Callable[[Any], Dict[Any, Any]]
+        self._filter_content_keys: Callable[[Any], dict[Any, Any]]
         self._hide_keys = True
         self._kegexes = kegexes
         self._logger = logging.getLogger(__name__)
-        self._menu_filter: Optional[Pattern] = None
-        self._menu_indices: Tuple[int, ...] = tuple()
+        self._menu_filter: Pattern | None = None
+        self._menu_indices: tuple[int, ...] = tuple()
 
         self._progress_bar_width = progress_bar_width
         self._status_width = status_width
         self._prefix_color = 8
         self._refresh = [refresh]
-        self._rgb_to_curses_color_idx: Dict[RgbTuple, int] = {}
+        self._rgb_to_curses_color_idx: dict[RgbTuple, int] = {}
         self._screen_min_height = screen_min_height
         self._scroll = 0
         self._content_format = self._default_content_format
@@ -182,29 +192,31 @@ class UserInterface(CursesWindow):
         self._one_line_input = FormHandlerText(screen=self._screen, ui_config=self._ui_config)
 
     def clear(self) -> None:
-        """clear the screen"""
+        """Clear the screen."""
         self._screen.clear()
         self._screen.refresh()
 
     def disable_refresh(self) -> None:
-        """Disable the screen refresh"""
+        """Disable the screen refresh."""
         self._refresh.append(self._refresh[-1])
         self._refresh.append(-1)
         self._screen.timeout(-1)
 
     def restore_refresh(self) -> None:
-        """Restore the screen refresh
-        to the previous value
-        """
+        """Restore the screen refresh to the previous value."""
         self._refresh.pop()
         self._screen.timeout(self._refresh.pop())
 
     def update_status(self, status: str = "", status_color: int = 0) -> None:
-        """update the status"""
+        """Update the status.
+
+        :param status: The string of status information
+        :param status_color: The color of status
+        """
         self._status = status
         self._status_color = status_color
 
-    def menu_filter(self, value: Optional[str] = "") -> Optional[Pattern]:
+    def menu_filter(self, value: str | None = "") -> Pattern | None:
         """Set or return the menu filter.
 
         :param value: None or the menu_filter regex to set
@@ -222,11 +234,11 @@ class UserInterface(CursesWindow):
                     self._logger.exception(exc)
         return self._menu_filter
 
-    def scroll(self, value: Optional[int] = None) -> int:
-        """Set or return the current scroll
+    def scroll(self, value: int | None = None) -> int:
+        """Set or return the current scroll.
 
         :param value: the value to set the scroll to
-        :type value: int
+        :raises TypeError: raise exception here
         :returns: the current scroll
         """
         if value is not None:
@@ -237,12 +249,13 @@ class UserInterface(CursesWindow):
 
     def content_format(
         self,
-        value: Optional[ContentFormat] = None,
+        value: ContentFormat | None = None,
         default: bool = False,
     ) -> ContentFormat:
-        """Set or return the current content format
+        """Set or return the current content format.
 
         :param value: The value to set the content format to
+        :param default: The default content format
         :returns: The current content format
         """
         if value is not None:
@@ -253,7 +266,7 @@ class UserInterface(CursesWindow):
 
     @property
     def _ui(self) -> Ui:
-        """Limit the callables the actions can access
+        """Limit the callables the actions can access.
 
         :returns: A tuple of available functions
         """
@@ -269,11 +282,9 @@ class UserInterface(CursesWindow):
         return res
 
     def _footer(self, key_dict: dict) -> CursesLine:
-        """build a footer from the key dict
-        spread the columns out evenly
+        """Build a footer from the key dict spread the columns out evenly.
 
         :param key_dict: the keys and their description
-        :type key_dict: dict
         :returns: The footer line
         """
         column_widths = [len(f"{str(k)}: {str(v)}") for k, v in key_dict.items()]
@@ -335,7 +346,7 @@ class UserInterface(CursesWindow):
     ) -> None:
         """Add a scroll bar if the length of the content is longer than the viewport height.
 
-        :param viewport_height: The height if the viewport
+        :param viewport_height: The height of the viewport
         :param len_heading: The height of the heading
         :param menu_size: The number of lines in the content
         :param body_start: Where we are in the body
@@ -362,7 +373,7 @@ class UserInterface(CursesWindow):
             )
 
     def _get_input_line(self) -> str:
-        """get one line of input from the user
+        """Get one line of input from the user.
 
         :returns: the lines
         """
@@ -395,8 +406,8 @@ class UserInterface(CursesWindow):
     def _display(
         self,
         lines: CursesLines,
-        line_numbers: Tuple[int, ...],
-        heading: Optional[CursesLines],
+        line_numbers: tuple[int, ...],
+        heading: CursesLines | None,
         indent_heading: int,
         key_dict: dict,
         await_input: bool,
@@ -405,21 +416,20 @@ class UserInterface(CursesWindow):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        """show something on the screen
+        """Show something on the screen.
 
         :param lines: The lines to show
-        :type lines: CursesLines
-        :param heading: the headers to show
-        :type heading: CursesLines or None
+        :param line_numbers: The number of lines to show
+        :param heading: The headers to show
+        :param indent_heading: The indentation of heading
         :param key_dict: any supplemental key to show
-        :type key_dict: dict
         :param await_input: Should we wait for a key
-        :type await_input: bool
+        :param count: The count to show
         :returns: the key pressed
         """
         heading = heading or CursesLines(tuple())
         heading_len = len(heading)
-        footer = self._footer(dict(**STANDARD_KEYS, **key_dict, **END_KEYS))
+        footer = self._footer({**STANDARD_KEYS, **key_dict, **END_KEYS})
         footer_at = self._screen_height - 1  # screen is 0 based index
         footer_len = 1
 
@@ -428,7 +438,7 @@ class UserInterface(CursesWindow):
 
         index_width = len(str(count))
 
-        keypad = set(str(x) for x in range(0, 10))
+        keypad = {str(x) for x in range(0, 10)}
         other_valid_keys = ["+", "-", "_", "KEY_F(5)", "^[", "\x1b"]
 
         while True:
@@ -507,7 +517,7 @@ class UserInterface(CursesWindow):
         self,
         entry: str,
         current: Any,
-    ) -> Union[Tuple[str, Action], Tuple[None, None]]:
+    ) -> tuple[str, Action] | tuple[None, None]:
         """Attempt to template & match the user input against the kegexes.
 
         :param entry: the user input
@@ -540,10 +550,9 @@ class UserInterface(CursesWindow):
         return None, None
 
     def _serialize_color(self, obj: Any) -> CursesLines:
-        """Serialize, if necessary and color an obj
+        """Serialize, if necessary and color an obj.
 
         :param obj: the object to color
-        :type obj: Any
         :returns: The generated lines
         """
         if self.content_format() is ContentFormat.ANSI:
@@ -568,8 +577,8 @@ class UserInterface(CursesWindow):
         self._cache_init_colors(rendered)
         return self._color_decorate_lines(rendered)
 
-    def _cache_init_colors(self, lines: List):
-        """Cache and init the unique colors for future use
+    def _cache_init_colors(self, lines: list):
+        """Cache and init the unique colors for future use.
 
         Maintain a mapping of RGB colors
         to curses colors in self._rgb_to_curses_color_idx
@@ -578,7 +587,7 @@ class UserInterface(CursesWindow):
         """
         if curses.COLORS > 16 and self._term_osc4_support:
             unique_colors = list(
-                set(chars.color for line in lines for chars in line if chars.color),
+                {chars.color for line in lines for chars in line if chars.color},
             )
             # start custom colors at 16
             for color in unique_colors:
@@ -604,15 +613,15 @@ class UserInterface(CursesWindow):
                     )
                     curses.init_pair(curses_colors_idx, curses_colors_idx, -1)
 
-    def _color_decorate_lines(self, lines: List[List[SimpleLinePart]]) -> CursesLines:
+    def _color_decorate_lines(self, lines: list[list[SimpleLinePart]]) -> CursesLines:
         """Color and decorate each of the lines.
 
-        :params lines: The lines to transform
+        :param lines: The lines to transform
         :returns: All lines colored
         """
         return CursesLines(tuple(self._color_decorate_line(line) for line in lines))
 
-    def _color_decorate_line(self, line: List[SimpleLinePart]) -> CursesLine:
+    def _color_decorate_line(self, line: list[SimpleLinePart]) -> CursesLine:
         """Color and decorate one line.
 
         :param line: The line to color
@@ -643,11 +652,10 @@ class UserInterface(CursesWindow):
             decoration=decoration,
         )
 
-    def _filter_and_serialize(self, obj: Any) -> Tuple[Optional[CursesLines], CursesLines]:
-        """filter an obj and serialize
+    def _filter_and_serialize(self, obj: Any) -> tuple[CursesLines | None, CursesLines]:
+        """Filter an obj and serialize.
 
         :param obj: the obj to serialize
-        :type obj: Any
         :returns: the serialize lines ready for display
         """
         heading = self._content_heading(obj, self._screen_width)
@@ -668,9 +676,10 @@ class UserInterface(CursesWindow):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-statements
-        """Show an object on the display
+        """Show an object on the display.
 
         :param objs: A list of one or more object
+        :param index: The index associated with an object
         :param await_input: Should we wait for user input before returning
         :returns: interaction with the user
         """
@@ -764,8 +773,8 @@ class UserInterface(CursesWindow):
                 content = Content(showing=filtered)
                 return Interaction(name=name, action=action, content=content, ui=self._ui)
 
-    def _obj_match_filter(self, obj: Dict, columns: List) -> bool:
-        """Check columns in a dictionary against a regex
+    def _obj_match_filter(self, obj: dict, columns: list) -> bool:
+        """Check columns in a dictionary against a regex.
 
         :param obj: The dict to check
         :param columns: The dicts keys to check
@@ -778,14 +787,13 @@ class UserInterface(CursesWindow):
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def _search_value(regex: Pattern, value: str) -> Optional[Match]:
-        """check a str against a regex
+    def _search_value(regex: Pattern, value: str) -> Match | None:
+        """Check a str against a regex.
+
         lru_cache enabled because this is hit during resize
 
         :param regex: the compiled regex
-        :type regex: Pattern
         :param value: the string to check
-        :type value: str
         :returns: the match if made
         """
         return regex.search(str(value))
@@ -793,13 +801,14 @@ class UserInterface(CursesWindow):
     def _get_heading_menu_items(
         self,
         current: Sequence[Any],
-        columns: List,
+        columns: list,
         indices,
-    ) -> Tuple[CursesLines, CursesLines]:
-        """build the menu
+    ) -> tuple[CursesLines, CursesLines]:
+        """Build the menu.
 
         :param current: A dict
         :param columns: The keys from the dictionary to use as columns
+        :param indices: The indices associated with items
         :returns: The heading and menu items
         """
         menu_builder = MenuBuilder(
@@ -812,8 +821,8 @@ class UserInterface(CursesWindow):
         menu_heading, menu_items = menu_builder.build(current, columns, indices)
         return menu_heading, menu_items
 
-    def _show_menu(self, current: Sequence[Any], columns: List, await_input: bool) -> Interaction:
-        """Show a menu on the screen
+    def _show_menu(self, current: Sequence[Any], columns: list, await_input: bool) -> Interaction:
+        """Show a menu on the screen.
 
         :param current: A dict
         :param columns: The keys from the dictionary to use as columns
@@ -821,7 +830,6 @@ class UserInterface(CursesWindow):
         :returns: Interaction with the user
         """
         while True:
-
             if self.scroll() == 0:
                 last_line_idx = min(len(current) - 1, self._screen_height - 3)
             else:
@@ -873,21 +881,24 @@ class UserInterface(CursesWindow):
     def show(
         self,
         obj: ContentType,
-        content_format: Optional[ContentFormat] = None,
-        index: Optional[int] = None,
-        columns: Optional[List] = None,
+        content_format: ContentFormat | None = None,
+        index: int | None = None,
+        columns: list | None = None,
         await_input: bool = True,
         filter_content_keys: Callable = lambda x: x,
         color_menu_item: Callable = lambda *args, **kwargs: (0, 0),
         content_heading: Callable = lambda *args, **kwargs: None,
     ) -> Interaction:
-        """Show something on the screen
+        """Show something on the screen.
 
         :param obj: The inbound object
         :param content_format: Set the content format
         :param index: When obj is a list, show this entry
         :param columns: When obj is a list of dicts, use these keys for menu columns
         :param await_input: Should we wait for user input?
+        :param filter_content_keys: To show the filter content keys
+        :param color_menu_item: To show the colored menu item
+        :param content_heading: Show the content heading
         :returns: interaction with the user
         """
         self._color_menu_item = color_menu_item

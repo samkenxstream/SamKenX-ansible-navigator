@@ -1,6 +1,7 @@
 """Produce a diagnostics report in json format."""
+from __future__ import annotations
+
 import datetime
-import json
 import sys
 import traceback
 
@@ -18,10 +19,10 @@ from pkg_resources import working_set
 
 from .command_runner import Command
 from .command_runner import CommandRunner
-from .configuration_subsystem import ApplicationConfiguration
 from .configuration_subsystem import Constants
 from .configuration_subsystem import to_effective
 from .configuration_subsystem import to_sources
+from .configuration_subsystem.definitions import ApplicationConfiguration
 from .image_manager import introspect
 from .image_manager import introspector
 from .utils import ansi
@@ -30,6 +31,7 @@ from .utils.definitions import LogMessage
 from .utils.functions import now_iso
 from .utils.functions import shlex_join
 from .utils.serialize import Loader
+from .utils.serialize import write_diagnostics_json
 from .utils.serialize import yaml
 
 
@@ -80,16 +82,16 @@ class Diagnostics:
 
     # pylint: disable=too-many-instance-attributes
 
-    __WARNING__: Dict[str, JSONTypes]  # pylint: disable=invalid-name
-    basics: Dict[str, JSONTypes]
-    container_engines: Dict[str, JSONTypes]
-    execution_environment: Dict[str, JSONTypes]
-    initialization: Dict[str, JSONTypes]
-    local_system: Dict[str, JSONTypes]
-    logs: Dict[str, JSONTypes]
-    python_packages: Dict[str, JSONTypes]
-    settings: Dict[str, JSONTypes]
-    settings_file: Dict[str, JSONTypes]
+    __WARNING__: dict[str, JSONTypes]  # pylint: disable=invalid-name
+    basics: dict[str, JSONTypes]
+    container_engines: dict[str, JSONTypes]
+    execution_environment: dict[str, JSONTypes]
+    initialization: dict[str, JSONTypes]
+    local_system: dict[str, JSONTypes]
+    logs: dict[str, JSONTypes]
+    python_packages: dict[str, JSONTypes]
+    settings: dict[str, JSONTypes]
+    settings_file: dict[str, JSONTypes]
 
 
 def register(collector: Collector):
@@ -175,8 +177,8 @@ class DiagnosticsCollector:
     def __init__(
         self,
         args: ApplicationConfiguration,
-        messages: List[LogMessage],
-        exit_messages: List[ExitMessage],
+        messages: list[LogMessage],
+        exit_messages: list[ExitMessage],
     ):
         """Initialize the ShowTech class.
 
@@ -212,10 +214,14 @@ class DiagnosticsCollector:
             settings=self._settings(),
             settings_file=self._settings_file(),
         )
+
         time = now_iso("local")
-        path = Path(f"diagnostics-{time}.json")
-        path.write_text(json.dumps(asdict(diagnostics), indent=4, sort_keys=True), encoding="utf-8")
-        message = f"\nDiagnostics written to: {path.resolve()}"
+        file_name = f"diagnostics-{time}.json"
+        path = f"{Path.home()}/{file_name}"
+        mode = 0o600
+        write_diagnostics_json(path, mode, asdict(diagnostics))
+        message = f"\nDiagnostics written to: {path}"
+
         if DIAGNOSTIC_FAILURES > 0:
             ansi.warning(color=self.color, message=message)
         else:
@@ -224,7 +230,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="warning"))
-    def _warning(self) -> Dict[str, JSONTypes]:
+    def _warning(self) -> dict[str, JSONTypes]:
         """Add a warning.
 
         :returns: The warning
@@ -233,7 +239,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="basic"))
-    def _basics(self) -> Dict[str, JSONTypes]:
+    def _basics(self) -> dict[str, JSONTypes]:
         """Add basic information.
 
         :returns: The basic information
@@ -250,7 +256,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="container engines"))
-    def _container_engines(self) -> Dict[str, JSONTypes]:
+    def _container_engines(self) -> dict[str, JSONTypes]:
         """Add container engines.
 
         :returns: The container engines
@@ -259,8 +265,8 @@ class DiagnosticsCollector:
             Command(identity="podman", command="podman --version", post_process=lambda c: c),
             Command(identity="docker", command="docker --version", post_process=lambda c: c),
         ]
-        CommandRunner().run_single_proccess(commands)
-        engines: Dict[str, JSONTypes] = {}
+        CommandRunner().run_single_process(commands)
+        engines: dict[str, JSONTypes] = {}
         for command in commands:
             engines[command.identity] = {
                 "return_code": command.return_code,
@@ -272,7 +278,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="execution environment"))
-    def _execution_environment(self) -> Dict[str, JSONTypes]:
+    def _execution_environment(self) -> dict[str, JSONTypes]:
         """Add execution environment information.
 
         :raises FailedCollection: If the collection process fails
@@ -292,7 +298,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="initialization"))
-    def _initialization(self) -> Dict[str, JSONTypes]:
+    def _initialization(self) -> dict[str, JSONTypes]:
         """Add initialization information.
 
         :returns: The initialization information
@@ -304,12 +310,12 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="log"))
-    def _log_collector(self) -> Dict[str, JSONTypes]:
+    def _log_collector(self) -> dict[str, JSONTypes]:
         """Add log collector information.
 
         :returns: The log collector information
         """
-        logs: List[JSONTypes] = []
+        logs: list[JSONTypes] = []
         cwd_log = Path("./ansible-navigator.log")
         if cwd_log.exists():
             contents = cwd_log.read_text(encoding="utf-8").splitlines()
@@ -332,7 +338,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="local system"))
-    def _local_system(self) -> Dict[str, JSONTypes]:
+    def _local_system(self) -> dict[str, JSONTypes]:
         """Add local system information.
 
         :raises FailedCollection: If the collection process fails
@@ -347,7 +353,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="python packages"))
-    def _python_packages(self) -> Dict[str, JSONTypes]:
+    def _python_packages(self) -> dict[str, JSONTypes]:
         """Add python packages information.
 
         :returns: The python packages information
@@ -359,7 +365,7 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="settings"))
-    def _settings(self) -> Dict[str, JSONTypes]:
+    def _settings(self) -> dict[str, JSONTypes]:
         """Add settings information.
 
         :returns: The settings information
@@ -371,12 +377,12 @@ class DiagnosticsCollector:
 
     @diagnostic_runner
     @register(Collector(name="settings file"))
-    def _settings_file(self) -> Dict[str, JSONTypes]:
+    def _settings_file(self) -> dict[str, JSONTypes]:
         """Add settings file information.
 
         :returns: The settings file information
         """
-        contents: Dict[str, JSONTypes] = {}
+        contents: dict[str, JSONTypes] = {}
         if self._args.internals.settings_file_path:
             text = Path(self._args.internals.settings_file_path).read_text(encoding="utf-8")
             contents = yaml.load(text, Loader=Loader)

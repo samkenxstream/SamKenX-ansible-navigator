@@ -1,5 +1,7 @@
 # cspell:ignore getpid, gmtime, msecs
 """Navigator entry point."""
+from __future__ import annotations
+
 import logging
 import os
 import signal
@@ -8,8 +10,6 @@ import sys
 from copy import deepcopy
 from curses import wrapper
 from pathlib import Path
-from typing import List
-from typing import Union
 
 from pkg_resources import working_set
 
@@ -19,9 +19,9 @@ from .action_defs import RunReturn
 from .action_defs import RunStdoutReturn
 from .action_runner import ActionRunner
 from .actions import run_action_stdout
-from .configuration_subsystem import ApplicationConfiguration
 from .configuration_subsystem import Constants
 from .configuration_subsystem import NavigatorConfiguration
+from .configuration_subsystem.definitions import ApplicationConfiguration
 from .image_manager import ImagePuller
 from .initialization import error_and_exit_early
 from .initialization import parse_and_update
@@ -32,7 +32,7 @@ from .utils.definitions import LogMessage
 from .utils.functions import clear_screen
 
 
-__version__: Union[Constants, str]
+__version__: Constants | str
 try:
     from ._version import version as __version__
 except ImportError:
@@ -45,13 +45,13 @@ PKG_NAME = "ansible_navigator"
 logger = logging.getLogger(PKG_NAME)
 
 
-def log_dependencies() -> List[LogMessage]:
+def log_dependencies() -> list[LogMessage]:
     """Retrieve installed packages and log as debug.
 
     :returns: All packages, version and location
     """
     # pylint: disable=not-an-iterable
-    installed_packages_list = sorted([f"{i.key}=={i.version} {i.location}" for i in working_set])
+    installed_packages_list = sorted(f"{i.key}=={i.version} {i.location}" for i in working_set)
     messages = [LogMessage(level=logging.DEBUG, message=pkg) for pkg in installed_packages_list]
     return messages
 
@@ -73,8 +73,6 @@ def pull_image(args):
     if image_puller.assessment.pull_required:
         image_puller.prologue_stdout()
         image_puller.pull_stdout()
-    if image_puller.assessment.exit_messages:
-        error_and_exit_early(image_puller.assessment.exit_messages)
 
 
 def run(args: ApplicationConfiguration) -> ActionReturn:
@@ -105,8 +103,8 @@ def run(args: ApplicationConfiguration) -> ActionReturn:
 
 def main():
     """Start application here."""
-    messages: List[LogMessage] = log_dependencies()
-    exit_messages: List[ExitMessage] = []
+    messages: list[LogMessage] = log_dependencies()
+    exit_messages: list[ExitMessage] = []
 
     args = deepcopy(NavigatorConfiguration)
     args.application_version = __version__
@@ -160,6 +158,8 @@ def main():
     run_message = f"{run_return.message}\n"
     if run_return.return_code != 0 and run_return.message:
         sys.stderr.write(run_message)
+        sys.exit(run_return.return_code)
+    elif run_return.return_code != 0:
         sys.exit(run_return.return_code)
     elif run_return.message:
         sys.stdout.write(run_message)

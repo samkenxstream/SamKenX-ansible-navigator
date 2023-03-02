@@ -1,4 +1,6 @@
 """Tests for serializing a dataclass."""
+from __future__ import annotations
+
 from dataclasses import asdict
 from dataclasses import dataclass
 from functools import partial
@@ -6,9 +8,7 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
-from typing import List
 from typing import NamedTuple
-from typing import Tuple
 from typing import Union
 
 import pytest
@@ -17,6 +17,7 @@ from ansible_navigator.content_defs import ContentBase
 from ansible_navigator.content_defs import ContentView
 from ansible_navigator.utils.serialize import SerializationFormat
 from ansible_navigator.utils.serialize import serialize
+from ...defaults import id_func
 
 
 class ParametrizeView(NamedTuple):
@@ -24,7 +25,7 @@ class ParametrizeView(NamedTuple):
 
     argnames: str = "content_view"
     argvalues: Iterable = (ContentView.NORMAL, ContentView.FULL)
-    ids: Callable = str
+    ids: Callable = id_func
 
 
 class ParametrizeFormat(NamedTuple):
@@ -32,7 +33,7 @@ class ParametrizeFormat(NamedTuple):
 
     argnames: str = "serialization_tuple"
     argvalues: Iterable = (("j", SerializationFormat.JSON), ("y", SerializationFormat.YAML))
-    ids: Callable = str
+    ids: Callable = id_func
 
 
 SimpleDictValueT = Union[bool, str, int]
@@ -93,7 +94,7 @@ class ContentTestOverride(ContentBase[OverrideDictValueT]):
 
     @staticmethod
     def _custom_dict_factory(
-        kv_pairs: List[Tuple[str, OverrideAllValuesT]],
+        kv_pairs: list[tuple[str, OverrideAllValuesT]],
         suffix: str,
     ) -> OverrideDictReturn:
         """Create a dictionary with suffixed values from a list of key-value pairs.
@@ -113,7 +114,7 @@ parametrize_serialization_format = pytest.mark.parametrize(**ParametrizeFormat()
 @parametrize_content_views
 def test_content_to_dict(
     content_view: ContentView,
-    serialization_tuple: Tuple[str, SerializationFormat],
+    serialization_tuple: tuple[str, SerializationFormat],
 ):
     """Test the conversion of the dataclass to a dict.
 
@@ -165,7 +166,7 @@ def test_content_to_yaml(content_view: ContentView):
 def test_content_to_dict_override(
     subtests: Any,
     content_view: ContentView,
-    serialization_tuple: Tuple[str, SerializationFormat],
+    serialization_tuple: tuple[str, SerializationFormat],
 ):
     """Test the conversion of the dataclass with overrides to a ``dict``.
 

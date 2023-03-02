@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from ..utils.compatibility import Traversable
+
 
 @dataclass
 class UIConfig:
@@ -17,10 +19,10 @@ class UIConfig:
     #: Indicates if the curses colors have been initialized
     colors_initialized: bool
     #: The path to the grammar directory
-    grammar_dir: str
+    grammar_dir: Traversable
     #: Indicates if terminal support for OSC4 is enabled
     osc4: bool
     #: The path to the 16 terminal color map
-    terminal_colors_path: str
+    terminal_colors_path: Traversable
     #: The path to the theme file
-    theme_path: str
+    theme_path: Traversable

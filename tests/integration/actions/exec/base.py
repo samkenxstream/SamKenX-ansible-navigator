@@ -1,11 +1,12 @@
 """The base class for exec interactive and stdout tests."""
 
+from __future__ import annotations
+
 import difflib
 import os
 
 from pathlib import Path
 from typing import Generator
-from typing import Optional
 
 import pytest
 
@@ -15,6 +16,7 @@ from ..._common import update_fixtures
 from ..._interactions import SearchFor
 from ..._interactions import UiTestStep
 from ..._tmux_session import TmuxSession
+from ..._tmux_session import TmuxSessionKwargs
 
 
 TEST_FIXTURE_DIR = Path(FIXTURES_DIR, "integration", "actions", "exec")
@@ -27,7 +29,7 @@ class BaseClass:
     update_fixtures = False
     pane_height = 25
     pane_width = 300
-    config_file: Optional[Path] = None
+    config_file: Path | None = None
 
     @pytest.fixture(scope="module", name="tmux_session")
     def fixture_tmux_session(
@@ -39,16 +41,16 @@ class BaseClass:
         :param request: The request for this fixture
         :yields: A tmux session
         """
-        tmux_params = {
-            "unique_test_id": request.node.nodeid,
+        params: TmuxSessionKwargs = {
+            "request": request,
             "pane_height": self.pane_height,
             "pane_width": self.pane_width,
         }
         if isinstance(self.config_file, Path):
             assert self.config_file.exists()
-            tmux_params["config_path"] = self.config_file
+            params["config_path"] = self.config_file
 
-        with TmuxSession(**tmux_params) as tmux_session:
+        with TmuxSession(**params) as tmux_session:
             yield tmux_session
 
     def test(self, request: pytest.FixtureRequest, tmux_session: TmuxSession, step: UiTestStep):
@@ -68,6 +70,12 @@ class BaseClass:
             value=step.user_input,
             search_within_response=search_within_response,
         )
+
+        # Mask out the container hostname
+        for idx, line in enumerate(received_output):
+            match = "HOSTNAME="
+            if line.startswith(match):
+                received_output[idx] = f"{match}{'X' * 8}"
 
         fixtures_update_requested = (
             self.update_fixtures

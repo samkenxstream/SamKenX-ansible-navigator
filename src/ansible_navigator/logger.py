@@ -1,13 +1,12 @@
 """Logging initialization."""
+from __future__ import annotations
 
 import datetime
 import logging
 import os
 
-from typing import Optional
-
-from .configuration_subsystem import ApplicationConfiguration
 from .configuration_subsystem import Constants
+from .configuration_subsystem.definitions import ApplicationConfiguration
 from .utils.compatibility import zoneinfo
 
 
@@ -26,11 +25,11 @@ class Formatter(logging.Formatter):
         self._time_zone = kwargs.pop("time_zone")
         super().__init__(*args, **kwargs)
 
-    def formatTime(self, record: logging.LogRecord, _datefmt: Optional[str] = None) -> str:
+    def formatTime(self, record: logging.LogRecord, _datefmt: str | None = None) -> str:
         """Format the log timestamp.
 
         :param record: The log record
-        :param _datefmt: The optiona date format
+        :param _datefmt: The optional date format
         :returns: The timestamp
         """
         if self._time_zone == "local":

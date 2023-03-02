@@ -1,10 +1,11 @@
 """Tests for colorize."""
-import os
+from __future__ import annotations
 
-from typing import Dict
 from typing import NamedTuple
 from unittest.mock import patch  # pylint: disable=preferred-module  # FIXME: GH-872
 
+from ansible_navigator.constants import GRAMMAR_DIR
+from ansible_navigator.constants import THEME_PATH
 from ansible_navigator.content_defs import ContentFormat
 from ansible_navigator.content_defs import ContentView
 from ansible_navigator.ui_framework.colorize import Colorize
@@ -13,18 +14,11 @@ from ansible_navigator.utils.serialize import SerializationFormat
 from ansible_navigator.utils.serialize import serialize
 
 
-SHARE_DIR = os.path.abspath(
-    os.path.join(os.path.basename(__file__), "..", "share", "ansible_navigator"),
-)
-THEME_PATH = os.path.join(SHARE_DIR, "themes", "dark_vs.json")
-GRAMMAR_DIR = os.path.join(SHARE_DIR, "grammar")
-
-
 class Sample(NamedTuple):
     """Sample data for colorize tests."""
 
     serialization_format: SerializationFormat
-    content: Dict[str, str] = {"test": "data"}
+    content: dict[str, str] = {"test": "data"}
     content_view: ContentView = ContentView.NORMAL
 
 
@@ -33,8 +27,11 @@ SAMPLE_YAML = Sample(serialization_format=SerializationFormat.YAML)._asdict()
 
 
 def test_basic_success_json():
-    """Ensure the json string is returned as 1 lines, 5 parts and can be reassembled
-    to the json string"""
+    """Ensure the json string is as expected.
+
+    Test that the json string is returned as 1 line, 5 parts and can be
+    reassembled to the json string.
+    """
     sample = serialize(**SAMPLE_JSON) + "\n"
     colorized = Colorize(grammar_dir=GRAMMAR_DIR, theme_path=THEME_PATH).render(
         doc=sample,
@@ -48,7 +45,9 @@ def test_basic_success_json():
 
 
 def test_basic_success_yaml():
-    """Ensure the yaml string is returned as 2 lines, with 1 and 3 parts
+    """Ensure the yaml string is returned as expected.
+
+    Check that the yaml string is returned as 2 lines, with 1 and 3 parts
     respectively, ensure the parts of the second line can be reassembled to
     the second line of the yaml string
     """
@@ -96,8 +95,12 @@ def test_basic_success_no_color():
 
 @patch("ansible_navigator.ui_framework.colorize.tokenize")
 def test_graceful_failure(mocked_func, caplog):
-    """Ensure a tokenization error returns the original one line json string
-    w/o color and the log reflects the critical error
+    """Test for correct error format.
+
+    Ensure a tokenization error returns the original one line json string
+    w/o color and the log reflects the critical error.
+    :param mocked_func: Mocked fixture
+    :param caplog: Capture log
     """
     mocked_func.side_effect = ValueError()
     sample = serialize(**SAMPLE_JSON)
@@ -152,7 +155,7 @@ YAML_TXT_EXPECTED = [
 
 
 def test_basic_success_yaml_text():
-    """Ensure the yaml string is returned matche the expected tokens."""
+    """Ensure the yaml string is returned match the expected tokens."""
     content_format = ContentFormat.YAML_TXT
 
     result = Colorize(grammar_dir=GRAMMAR_DIR, theme_path=THEME_PATH).render(

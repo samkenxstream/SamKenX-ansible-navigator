@@ -1,13 +1,12 @@
 """An image introspector."""
+from __future__ import annotations
+
 import inspect
 import json
 import logging
 import tempfile
 
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 from ..runner import Command
 from . import introspect
@@ -16,7 +15,7 @@ from . import introspect
 logger = logging.getLogger(__name__)
 
 
-def run(image_name: str, container_engine: str) -> Tuple[Dict, List[str], int]:
+def run(image_name: str, container_engine: str) -> tuple[dict, list[str], int]:
     """Run runner to collect image details.
 
     :param image_name: The full image name
@@ -48,7 +47,7 @@ def run(image_name: str, container_engine: str) -> Tuple[Dict, List[str], int]:
     return parsed, errors, return_code
 
 
-def parse(output) -> Tuple[List[str], Dict]:
+def parse(output) -> tuple[list[str], dict]:
     """Load and process the ``json`` output from the image introspection process.
 
     :param output: The output from the image introspection process

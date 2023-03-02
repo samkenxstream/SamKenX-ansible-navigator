@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 from typing import List
 from typing import Tuple
@@ -12,14 +14,13 @@ if TYPE_CHECKING:
 
 
 def tokenize(
-    compiler: "Compiler",
+    compiler: Compiler,
     state: State,
     line: str,
     first_line: bool,
-) -> Tuple[State, Regions]:
-
+) -> tuple[State, Regions]:
     """tokenize a string into it's parts"""
-    ret: List[Region] = []
+    ret: list[Region] = []
     pos = 0
     boundary = state.cur.boundary
 

@@ -1,5 +1,5 @@
 """Tests for doc from welcome, interactive, without an EE."""
-from typing import List
+from __future__ import annotations
 
 import pytest
 
@@ -9,7 +9,7 @@ from .base import BaseClass
 # module doc
 CLI_MODULE_DOC = "ansible-navigator --execution-environment false"
 
-testdata_module_doc: List = [
+testdata_module_doc: list = [
     (0, CLI_MODULE_DOC, "welcome", "module_doc_pass", []),
     (1, ":doc company_name.coll_1.mod_1", "load doc", "module_doc_pass", []),
     (2, ":{{ examples }}", "load examples", "module_doc_pass", []),
@@ -18,7 +18,7 @@ testdata_module_doc: List = [
 # lookup plugin doc
 CLI_LOOKUP_DOC = "ansible-navigator  --execution-environment false"
 
-testdata_lookup_doc: List = [
+testdata_lookup_doc: list = [
     (0, CLI_LOOKUP_DOC, "welcome", "lookup_doc_pass", []),
     (1, ":doc company_name.coll_1.lookup_1 -t lookup", "load doc", "lookup_doc_pass", []),
 ]
@@ -33,7 +33,7 @@ testdata_module_doc_not_exist = [
         ":doc company_name.coll_1.doesnotexist",
         "ansible-navigator doc wrong plugin name",
         "module_doc_fail",
-        ["module company_name.coll_1.doesnotexist not found in", "local_errors"],
+        ["WARNING", "module", "company_name.coll_1.doesnotexist", "not", "found", "local_errors"],
     ),
 ]
 

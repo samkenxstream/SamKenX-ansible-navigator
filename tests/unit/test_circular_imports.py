@@ -9,6 +9,8 @@ This module is based on an idea that ``pytest`` uses for self-testing:
 * https://twitter.com/codewithanthony/status/1229445110510735361
 * https://github.com/aio-libs/aiohttp/blob/master/tests/test_circular_imports.py
 """  # noqa: E501
+from __future__ import annotations
+
 import os
 import pkgutil
 import subprocess  # noqa: S404 Required due to the nature of this test
@@ -18,14 +20,13 @@ from itertools import chain
 from pathlib import Path
 from types import ModuleType
 from typing import Generator
-from typing import List
 
 import pytest
 
 import ansible_navigator
 
 
-def _find_all_importables(pkg: ModuleType) -> List[str]:
+def _find_all_importables(pkg: ModuleType) -> list[str]:
     """Find all importables in the project.
 
     :param pkg: The package in which importables will be found

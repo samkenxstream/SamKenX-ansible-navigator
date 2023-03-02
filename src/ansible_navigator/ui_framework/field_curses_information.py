@@ -1,8 +1,8 @@
 """An information field formatted as curses lines."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Callable
-from typing import Optional
-from typing import Union
 
 from .curses_defs import CursesLines
 from .curses_window import Window
@@ -20,9 +20,9 @@ class FieldCursesInformation:
     information: CursesLines
     current_error: str = ""
     window_handler = FormHandlerInformation
-    valid: Union[bool, Unknown] = unknown
+    valid: bool | Unknown = unknown
     validator: Callable = FieldValidators.null
-    win: Optional[Window] = None
+    win: Window | None = None
 
     @property
     def full_prompt(self) -> str:
